@@ -50,8 +50,8 @@ function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           {/* 6. Espaço para o Logo */}
-          <h1 className="text-4xl font-bold tracking-wider">HigienizaPRO</h1>
-          <p className="text-gray-400 mt-2">Portal do Parceiro</p>
+          <h1 className="text-4xl font-bold tracking-wider text-brand-blue">EXTREMA LIMPEZA</h1>
+          <p className="text-gray-400 mt-2">Higienização de Estofados</p>
         </div>
 
         <div className="bg-gray-800/60 backdrop-blur-sm p-8 rounded-xl shadow-2xl">
@@ -89,7 +89,7 @@ function LoginPage() {
              <button
 type="submit"
 disabled={loading}
-className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800/50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center"
+              className="w-full bg-brand-blue hover:opacity-90 disabled:bg-blue-800/50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center"
 >
 {loading ? (
 <div className="flex items-center justify-center gap-2">
