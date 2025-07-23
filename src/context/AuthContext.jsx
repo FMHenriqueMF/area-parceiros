@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -14,38 +14,64 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAppLocked, setIsAppLocked] = useState(false);
+  const [activeServiceId, setActiveServiceId] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Usuário está logado, vamos buscar suas permissões
         const userDocRef = doc(db, "usuarios", user.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
-          // Anexa os dados do Firestore ao objeto do usuário
           setCurrentUser({ ...user, ...userDoc.data() });
         } else {
-          // Usuário autenticado mas sem perfil no Firestore
-          setCurrentUser(user); // Ou null, dependendo da sua regra de negócio
+          setCurrentUser(user);
         }
       } else {
-        // Usuário está deslogado
         setCurrentUser(null);
       }
       setLoading(false);
     });
-
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      const lockedStatuses = ['deslocamento', 'cheguei', 'aguardandopagamento'];
+      const q = query(
+        collection(db, "clientes"),
+        where("parceiroId", "==", currentUser.uid),
+        where("status", "in", lockedStatuses)
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const activeServiceDoc = snapshot.docs[0];
+          setIsAppLocked(true);
+          setActiveServiceId(activeServiceDoc.id);
+        } else {
+          setIsAppLocked(false);
+          setActiveServiceId(null);
+        }
+      });
+
+      return () => unsubscribe();
+    } else {
+      setIsAppLocked(false);
+      setActiveServiceId(null);
+    }
+  }, [currentUser]);
 
   const value = {
     currentUser,
     loading,
+    isAppLocked,
+    activeServiceId,
   };
 
   return (
     <AuthContext.Provider value={value}>
       {!loading && children}
-    </AuthContext.Provider>
+    </AuthContext.Provider> // <-- LINHA CORRIGIDA
   );
 }

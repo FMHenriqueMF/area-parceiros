@@ -8,13 +8,15 @@ export default {
   ],
   theme: {
     extend: {
-      // Vamos adicionar nossa paleta de cores aqui
       colors: {
-        'brand-blue': '#004aad', // O azul da sua logo
-        'brand-yellow': '#ffde59', // O amarelo da sua logo
-        'accent-amber': '#f59e0b', // Um tom de âmbar mais sóbrio para detalhes
+        'brand-blue': '#004aad',
+        'brand-yellow': '#ffde59',
+        'accent-amber': '#f59e0b',
+        'go-green': '#4ade80', // Verde vibrante (Tailwind Green 400)
+                'status-orange': '#f97316', // Laranja vibrante (Tailwind Orange 500)
+
       }
     },
   },
-  plugins: [],
+  plugins: [require('@tailwindcss/line-clamp'),],
 }
