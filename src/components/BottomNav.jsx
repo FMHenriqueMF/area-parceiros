@@ -25,19 +25,19 @@ function BottomNav() {
           <FiHome size={22} />
           <span className="text-xs">Início</span>
         </NavLink>
-        <NavLink to="/mural" className={getLinkClass}>
+        <NavLink to="/lista" className={getLinkClass}>
           <FiGrid size={22} />
-          <span className="text-xs">Mural</span>
+          <span className="text-xs text-center">Lista de Clientes</span>
         </NavLink>
         <NavLink to="/meus-servicos" className={getLinkClass}>
           <FiClipboard size={22} />
-          <span className="text-xs">Meus Serviços</span>
+        <span className="text-xs text-center">Meus Serviços</span>
         </NavLink>
         {/* NOVO LINK PARA SALDOS */}
-<NavLink to="/saldos" className={getLinkClass}>
-  <FiDollarSign size={22} />
-  <span className="text-xs">Saldos</span> {/* Tente leading-none ou leading-tight */}
-</NavLink>
+        <NavLink to="/saldos" className={getLinkClass}>
+        <FiDollarSign size={22} />
+        <span className="text-xs">Ganhos</span></NavLink> 
+
         {/* LINK PARA O PERFIL */}
         <NavLink to="/perfil" className={getLinkClass}>
           <FiUser size={22} />

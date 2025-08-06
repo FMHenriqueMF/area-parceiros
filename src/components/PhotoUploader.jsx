@@ -1,7 +1,8 @@
 // src/components/PhotoUploader.jsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { FiXCircle } from 'react-icons/fi';
 
 // Props:
 // - clienteId: ID do cliente para organizar as fotos no Storage
@@ -10,14 +11,32 @@ function PhotoUploader({ clienteId, onUploadComplete }) {
   const [files, setFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState([]);
+
+  // Efeito para criar e limpar as URLs de pré-visualização
+  useEffect(() => {
+    if (files.length === 0) {
+      setPreviewUrls([]);
+      return;
+    }
+    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+    setPreviewUrls(newPreviewUrls);
+
+    // Função de limpeza para revogar as URLs
+    return () => newPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+  }, [files]);
 
   const handleFileChange = (e) => {
-    // Pega os arquivos selecionados e os coloca no estado
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      // Pega os arquivos selecionados e os coloca no estado
+      setFiles(prevFiles => [...prevFiles, ...Array.from(e.target.files)]);
     }
   };
 
+  const handleRemoveFile = (indexToRemove) => {
+    setFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
+  };
+  
   const handleUpload = async () => {
     if (files.length === 0) return;
     setIsUploading(true);
@@ -25,7 +44,6 @@ function PhotoUploader({ clienteId, onUploadComplete }) {
     const storage = getStorage();
     const urls = [];
 
-    // Faz o upload de cada arquivo, um por um
     for (const file of files) {
       const storageRef = ref(storage, `clientes/${clienteId}/${Date.now()}_${file.name}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
@@ -49,10 +67,9 @@ function PhotoUploader({ clienteId, onUploadComplete }) {
       });
     }
 
-    // Chama a função do componente pai com as URLs
     onUploadComplete(urls);
     setIsUploading(false);
-    setFiles([]); // Limpa os arquivos selecionados
+    setFiles([]);
   };
 
   return (
@@ -62,15 +79,39 @@ function PhotoUploader({ clienteId, onUploadComplete }) {
       </label>
       <input
         type="file"
-        multiple // Permite selecionar múltiplos arquivos
-        accept="image/*" // Aceita apenas imagens
+        multiple
+        accept="image/*"
         onChange={handleFileChange}
         className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600"
       />
+      
+      {/* Seção de Pré-visualização */}
+      {previewUrls.length > 0 && (
+        <div className="mt-4 border-t border-gray-700 pt-4">
+          <p className="text-sm text-gray-300 font-semibold mb-2">Pré-visualização ({files.length} foto(s)):</p>
+          <div className="grid grid-cols-3 gap-2">
+            {previewUrls.map((url, index) => (
+              <div key={index} className="relative w-full h-24 rounded-lg overflow-hidden group">
+                <img src={url} alt={`Pré-visualização ${index + 1}`} className="object-cover w-full h-full" />
+                <button 
+                  onClick={() => handleRemoveFile(index)}
+                  className="absolute top-1 right-1 bg-red-500 rounded-full p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remover foto"
+                >
+                  <FiXCircle size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {files.length > 0 && !isUploading && (
         <div className="mt-4">
-          <p className="text-sm text-gray-400">{files.length} foto(s) selecionada(s).</p>
-          <button onClick={handleUpload} className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+          <button 
+            onClick={handleUpload} 
+            className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
             Enviar Fotos
           </button>
         </div>

@@ -4,6 +4,8 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav'; // 1. Importar a BottomNav
+import FloatingSupportButton from './FloatingSupportButton'; // 1. Importar o novo componente
+
 
 function MainLayout() {
   return (
@@ -14,6 +16,8 @@ function MainLayout() {
         <Outlet />
       </main>
       <BottomNav /> {/* 2. Adicionar a BottomNav aqui */}
+            <FloatingSupportButton /> {/* 2. Adicionar o botão aqui */}
+
     </div>
   );
 }

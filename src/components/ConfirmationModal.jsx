@@ -3,9 +3,12 @@
 import React from 'react';
 import Lottie from 'lottie-react';
 import successAnimation from '../assets/success-animation.json';
+import paymentAnimation from '../assets/payment-animation.json';
+
 import { FiGrid, FiClipboard } from 'react-icons/fi';
 
-function ConfirmationModal({ show, onClose, onNavigate }) {
+
+function ConfirmationModal({ show, onClose, onNavigate, title, message,animation  }) {
   if (!show) {
     return null;
   }
@@ -19,13 +22,13 @@ function ConfirmationModal({ show, onClose, onNavigate }) {
         
         {/* Animação do Lottie */}
         <Lottie 
-          animationData={successAnimation} 
+          animationData={animation} 
           loop={true}
           style={{ height: 120, width: 120, margin: '0 auto' }}
         />
         
-        <h2 className="text-2xl font-bold text-white mt-4">Serviço Aceito!</h2>
-        <p className="text-gray-400 mt-2 mb-6">O cliente foi adicionado à sua lista em "Meus Serviços". O que você deseja fazer agora?</p>
+        <h2 className="text-2xl font-bold text-white mt-4">{title}</h2>
+        <p className="text-gray-400 mt-2 mb-6">{message}</p>
 
         <div className="flex flex-col space-y-3">
           <button
@@ -40,7 +43,7 @@ function ConfirmationModal({ show, onClose, onNavigate }) {
             className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center gap-2"
           >
             <FiGrid />
-            Continuar no Mural
+            Continuar na Lista de Clientes
           </button>
         </div>
       </div>

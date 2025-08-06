@@ -1,17 +1,21 @@
 // src/pages/MeusServicosPage.jsx
 
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react'; // Adicionar useRef
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import MyServiceClientCard from '../components/MyServiceClientCard.jsx';
 import { Link } from 'react-router-dom';
+import { logUserActivity } from '../utils/logger.js';
+
 
 function MeusServicosPage() {
   // Renomeamos o 'loading' do useAuth para 'authLoading' para não haver conflito
   const { currentUser, loading: authLoading } = useAuth();
   const [meusClientes, setMeusClientes] = useState([]);
   const [loading, setLoading] = useState(true);
+    const hasLoggedView = useRef(false); // Adicionar porteiro
+
 
   useEffect(() => {
     // Se a autenticação ainda está carregando, não fazemos nada.
@@ -25,11 +29,15 @@ function MeusServicosPage() {
       setMeusClientes([]);
       return;
     }
+    if (currentUser && !hasLoggedView.current) {
+      logUserActivity(currentUser.uid, 'Acessou Meus Serviços');
+      hasLoggedView.current = true;
+    }
 
     // Se temos um usuário, iniciamos a busca.
     const q = query(
       collection(db, "clientes"),
-      where("parceiroId", "==", currentUser.uid),
+      where("aceito_por_uid", "==", currentUser.uid),
       where("status", "==", "aceito")
     );
 
@@ -81,11 +89,11 @@ function MeusServicosPage() {
           <div className="text-center py-20 px-6 bg-gray-800 rounded-lg">
             <h2 className="text-2xl font-semibold text-white mb-3">Sua Agenda está Vazia</h2>
             <p className="text-gray-400 mb-8">Parece que você não tem nenhum serviço aceito no momento.</p>
-            <Link 
-              to="/mural"
+            <Link
+              to="/lista"
               className="bg-brand-blue hover:opacity-90 text-white font-bold py-3 px-6 rounded-lg transition duration-300 inline-block"
             >
-              Encontrar Novos Clientes no Mural
+              Encontrar Novos Clientes na Lista de Clientes
             </Link>
           </div>
         )}

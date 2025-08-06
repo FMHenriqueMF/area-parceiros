@@ -6,6 +6,8 @@ import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/fi
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import ActionConfirmationModal from './ActionConfirmationModal.jsx';
+import { logUserActivity } from '../utils/logger.js'; // 1. Importar o logger
+
 
 const statusStyles = {
   aceito: { text: 'Aceito', color: 'bg-yellow-500', buttonText: 'Iniciar Deslocamento', nextStatus: 'deslocamento' },
@@ -17,7 +19,7 @@ const statusStyles = {
 
 function MyServiceClientCard({ cliente }) {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser } = useAuth(); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -52,7 +54,12 @@ function MyServiceClientCard({ cliente }) {
     }
   }
   // -----------------------------------------------------------
-
+  const handleCardClick = () => {
+    if (currentUser) {
+      logUserActivity(currentUser.uid, 'Verificou o cliente pelo Meus Serviços', { clienteId: cliente.id , OS: cliente.ultimos4 });
+    }
+    navigate(`/cliente/${cliente.id}`);
+  };
   const handleActionClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -78,8 +85,9 @@ function MyServiceClientCard({ cliente }) {
   };
 
   const handleUpdateStatus = async () => {
-    if (!currentStatus.nextStatus) {
-      navigate(`/cliente/${cliente.id}`);
+    if (!currentStatus.nextStatus) { 
+      // Se o botão for "Ver Detalhes", também logamos a ação
+      handleCardClick();
       return;
     }
     if (!currentUser) {
@@ -96,6 +104,12 @@ function MyServiceClientCard({ cliente }) {
         timestamp: serverTimestamp(),
         responsavel: currentUser.nome_empresa,
         parceiroId: currentUser.uid,
+      });
+        await logUserActivity(currentUser.uid, 'Atualizou o Status', { 
+        clienteId: cliente.id, 
+        OS: cliente.ultimos4 || 'N/A',
+        previousStatus: cliente.status,
+        newStatus: currentStatus.nextStatus 
       });
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
@@ -124,7 +138,7 @@ function MyServiceClientCard({ cliente }) {
 
     return (
     <>
-      <Link to={`/cliente/${cliente.id}`} className="block h-full">
+      <div onClick={handleCardClick} className="block h-full cursor-pointer">
         <div className={`bg-gray-800 rounded-lg shadow-lg border-2 ${borderColor} h-full flex flex-col justify-between p-4`}>
           <div>
             <div className="flex justify-between items-center mb-2">
@@ -133,7 +147,7 @@ function MyServiceClientCard({ cliente }) {
                 {currentStatus.text}
               </span>
             </div>
-            <p className="text-sm text-gray-400">{cliente.servicoContratado || 'Serviço não informado'}</p>
+            <p className="text-sm text-gray-400">{cliente.itens_cliente || 'Serviço não informado'}</p>
             <p className="text-xs text-gray-500">{`${cliente.bairro}, ${cliente.cidade}`}</p>
           </div>
 
@@ -154,7 +168,7 @@ function MyServiceClientCard({ cliente }) {
             </button>
           </div>
         </div>
-      </Link>
+      </div>
       
       <ActionConfirmationModal
         show={isModalOpen}

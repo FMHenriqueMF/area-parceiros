@@ -1,24 +1,37 @@
-// src/pages/MuralPage.jsx
+// src/pages/ListaPage.jsx
 
-import { useState, useEffect } from 'react';
-import { db } from '../firebase';
+import React, { useEffect, useState, useRef } from 'react'; // Adicionar useRef
+import { db } from '../firebase.js';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import ClientCard from '../components/ClientCard.jsx';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext.jsx';
+import { logUserActivity } from '../utils/logger.js';
 
-function MuralPage() {
+function ListaPage() {
   const { currentUser } = useAuth();
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
+    const hasLoggedView = useRef(false); // Adicionar porteiro
+
 
   useEffect(() => {
     // 1. Verificamos por 'currentUser.estado' (com 'e' minúsculo), como você corrigiu
     if (currentUser && currentUser.estado) {
+      
+      // 3. Lógica do "Porteiro" adicionada aqui dentro
+      // Só executa o log se a "bandeira" do porteiro ainda não foi levantada
+      if (!hasLoggedView.current) {
+        logUserActivity(currentUser.uid, 'Acessou Lista de Clientes');
+        hasLoggedView.current = true; // Avisa o porteiro para levantar a bandeira
+      }
+
+      // O resto da sua lógica de busca de clientes continua exatamente igual
+      setLoading(true);
       const q = query(
         collection(db, "clientes"),
         where("status", "==", "disponivel"),
         // 2. Comparamos o campo 'Estado' (maiúsculo) com o valor de 'currentUser.estado' (minúsculo)
-        where("Estado", "==", currentUser.estado) 
+        where("Estado", "==", currentUser.estado)
       );
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -50,8 +63,11 @@ function MuralPage() {
 
         {clientes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {clientes.map((cliente) => (
-              <ClientCard key={cliente.id} cliente={cliente} />
+            {clientes.map((cliente) => ( 
+              
+
+              <ClientCard key={cliente.id} cliente={cliente} />  
+
             ))}
           </div>
         ) : (
@@ -65,4 +81,4 @@ function MuralPage() {
 }
 
 // 3. Garantir que a exportação default está aqui no final
-export default MuralPage;
+export default ListaPage;

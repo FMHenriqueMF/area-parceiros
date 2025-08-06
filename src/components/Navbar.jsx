@@ -33,14 +33,14 @@ function Navbar() {
           {/* Lado Esquerdo */}
           <div className="flex items-center space-x-4">
             <NavLink to="/" className={titleStyle}>
-              {isAppLocked ? 'Serviço em Andamento' : 'Extrema Limpeza'}
+              {isAppLocked ? 'Serviço em Andamento' : 'Premier Clean'}
             </NavLink>
             <div className="hidden sm:flex sm:space-x-2">
-              {isAppLocked ? <span className="text-gray-500 ..."><FiGrid /> Mural</span> : <NavLink to="/mural" className={getLinkClass}><FiGrid /> Mural</NavLink>}
+              {isAppLocked ? <span className="text-gray-500 ..."><FiGrid /> Lista de Clientes</span> : <NavLink to="/lista" className={getLinkClass}><FiGrid /> Lista de Clientes</NavLink>}
               {isAppLocked ? <span className="text-gray-500 ..."><FiClipboard /> Meus Serviços</span> : <NavLink to="/meus-servicos" className={getLinkClass}><FiClipboard /> Meus Serviços</NavLink>}
               
               {/* NOVO LINK PARA SALDOS */}
-              {isAppLocked ? <span className="text-gray-500 ..."><FiDollarSign /> Saldos</span> : <NavLink to="/saldos" className={getLinkClass}><FiDollarSign /> Saldos</NavLink>}
+              {isAppLocked ? <span>...</span> : <NavLink to="/saldos" className={getLinkClass}><FiDollarSign /> Ganhos</NavLink>} {/* 2. Adicionar novo link */}
             </div>
           </div>
 

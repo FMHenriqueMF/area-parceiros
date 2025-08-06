@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import LoadingSpinner from '../components/LoadingSpinner'; // 1. Importar o spinner
+import { logUserActivity } from '../utils/logger.js'; // Importar
+
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -28,6 +30,8 @@ function LoginPage() {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         if (userData.tipo === 'parceiro' || userData.ADM === 'SIM') {
+          await logUserActivity(user.uid, 'Realizou Login');
+
           navigate('/');
         } else {
           await auth.signOut();
@@ -43,6 +47,20 @@ function LoginPage() {
       setLoading(false); // 4. Desativar o carregamento, independente do resultado
     }
   };
+  // --- NOVA FUNÇÃO PARA "ESQUECI A SENHA" ---
+  const handleForgotPassword = async () => {
+    const userEmail = prompt("Por favor, digite o seu e-mail para enviarmos o link de redefinição de senha:");
+    if (userEmail) {
+      try {
+        await sendPasswordResetEmail(auth, userEmail);
+        alert(`Um e-mail de redefinição de senha foi enviado para ${userEmail}. Verifique sua caixa de entrada e spam.`);
+      } catch (error) {
+        console.error("Erro ao enviar e-mail de redefinição:", error);
+        alert("Não foi possível enviar o e-mail. Verifique se o e-mail digitado está correto e tente novamente.");
+      }
+    }
+  };
+
 
   return (
     // 5. Novo fundo com gradiente
@@ -50,7 +68,7 @@ function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           {/* 6. Espaço para o Logo */}
-          <h1 className="text-4xl font-bold tracking-wider text-brand-blue">EXTREMA LIMPEZA</h1>
+          <h1 className="text-4xl font-bold tracking-wider text-brand-blue">PREMIER CLEAN</h1>
           <p className="text-gray-400 mt-2">Higienização de Estofados</p>
         </div>
 
@@ -83,29 +101,29 @@ function LoginPage() {
                 required
               />
             </div>
-            
+
             {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
 
-             <button
-type="submit"
-disabled={loading}
+            <button
+              type="submit"
+              disabled={loading}
               className="w-full bg-brand-blue hover:opacity-90 disabled:bg-blue-800/50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center"
->
-{loading ? (
-<div className="flex items-center justify-center gap-2">
-<LoadingSpinner />
-Carregando...
-</div>
-) : (
-'Entrar'
-)}
-</button>
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <LoadingSpinner />
+                  Carregando...
+                </div>
+              ) : (
+                'Entrar'
+              )}
+            </button>
           </form>
 
           <div className="text-center mt-6">
-            <a href="#" className="text-sm text-gray-400 hover:text-blue-400 transition">
+            <button onClick={handleForgotPassword} className="text-sm text-gray-400 hover:text-blue-400 transition underline">
               Esqueceu a senha?
-            </a>
+            </button>
           </div>
         </div>
       </div>
