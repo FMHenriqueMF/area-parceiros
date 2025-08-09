@@ -118,14 +118,11 @@ function PerfilPage() {
 
   const handleUpdateField = useCallback(async (fieldName, fieldValue) => {
   if (!currentUser) {
-    console.log("currentUser não está disponível.");
     return;
   }
-  console.log(`Tentando salvar o campo: ${fieldName} com o valor: ${fieldValue}`);
   try {
     const userRef = doc(db, "usuarios", currentUser.uid);
     await updateDoc(userRef, { [fieldName]: fieldValue });
-    console.log(`Campo ${fieldName} salvo com sucesso!`);
   } catch (error) {
     console.error(`Erro ao salvar ${fieldName}:`, error);
     alert(`Não foi possível salvar a alteração.`);

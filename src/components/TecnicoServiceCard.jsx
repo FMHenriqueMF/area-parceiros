@@ -1,10 +1,10 @@
-// src/components/MyServiceClientCard.jsx
+// src/components/TecnicoServiceCard.jsx
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import ActionConfirmationModal from './ActionConfirmationModal.jsx';
 import { logUserActivity } from '../utils/logger.js'; 
 
@@ -17,7 +17,7 @@ const statusStyles = {
   finalizado: { text: 'Finalizado', color: 'bg-gray-600', buttonText: 'Ver Detalhes', nextStatus: null },
 };
 
-function MyServiceClientCard({ cliente }) {
+function TecnicoServiceCard({ cliente }) {
   const navigate = useNavigate();
   const { currentUser } = useAuth(); 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,7 +25,6 @@ function MyServiceClientCard({ cliente }) {
 
   const currentStatus = statusStyles[cliente.status] || { text: cliente.status, color: 'bg-gray-400', buttonText: 'Ver Detalhes' };
 
-  let isServiceReady = false;
   if (cliente?.data && typeof cliente.data === 'string') {
     const dateParts = cliente.data.split('/');
     if (dateParts.length === 3) {
@@ -48,26 +47,21 @@ function MyServiceClientCard({ cliente }) {
       const timeDifference = serviceDate.getTime() - now.getTime();
       const oneAndHalfHoursInMs = 1.5 * 60 * 60 * 1000;
 
-      if (timeDifference <= oneAndHalfHoursInMs) {
-        isServiceReady = true;
-      }
+
     }
   }
-  // -----------------------------------------------------------
+
   const handleCardClick = () => {
     if (currentUser) {
       logUserActivity(currentUser.uid, 'Verificou o cliente pelo Meus Serviços', { clienteId: cliente.id , OS: cliente.ultimos4 });
     }
-    navigate(`/cliente/${cliente.id}`);
+    navigate(`/servico/${cliente.id}`);
   };
   const handleActionClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (currentStatus.nextStatus === 'deslocamento' && !isServiceReady) {
-      alert(`Este serviço só pode ser iniciado 1h30min antes do horário agendado.`);
-      return;
-    }
+
 
     if (currentStatus.nextStatus === 'deslocamento') {
       setIsModalOpen(true);
@@ -129,16 +123,6 @@ function MyServiceClientCard({ cliente }) {
     }
   }
 
-  // >>>>>>>>>>>>>>>>> LÓGICA CORRIGIDA <<<<<<<<<<<<<<<<<<<<
-  let itensArray = [];
-  if (cliente.itens_cliente) {
-    if (Array.isArray(cliente.itens_cliente)) {
-        itensArray = cliente.itens_cliente.filter(item => item && item.trim() !== '');
-    } else if (typeof cliente.itens_cliente === 'string') {
-        itensArray = cliente.itens_cliente.split(' ').map(item => item.trim()).filter(item => item !== '');
-    }
-  }
-  
   const borderColor = isToday ? 'border-status-orange' : 'border-gray-700';
   const osNumber = cliente.ultimos4 || 'N/A';
   const data = cliente.data || 'Sem data';
@@ -157,12 +141,10 @@ function MyServiceClientCard({ cliente }) {
               </span>
             </div>
             
-            {/* LÓGICA DE RENDERIZAÇÃO DOS ITENS CORRIGIDA */}
+            {/* LÓGICA DE RENDERIZAÇÃO DA STRING COMPLETA */}
             <div className="text-sm text-gray-400 space-y-1">
-              {itensArray.length > 0 ? (
-                itensArray.map((item, index) => (
-                  <p key={index}>{item}</p>
-                ))
+              {cliente.itens_cliente ? (
+                <p className="whitespace-pre-line">{cliente.itens_cliente}</p>
               ) : (
                 <p>Serviço não informado</p>
               )}
@@ -183,7 +165,6 @@ function MyServiceClientCard({ cliente }) {
             </div>
             <button
               onClick={handleActionClick}
-              disabled={cliente.status === 'aceito' && !isServiceReady}
               className="bg-brand-blue hover:opacity-90 text-white font-bold py-2 px-4 rounded-lg text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
             >
               {currentStatus.buttonText}
@@ -206,4 +187,4 @@ function MyServiceClientCard({ cliente }) {
   );
 }
 
-export default MyServiceClientCard;
+export default TecnicoServiceCard;

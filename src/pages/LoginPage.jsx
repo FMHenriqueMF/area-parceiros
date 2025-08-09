@@ -68,7 +68,7 @@ function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           {/* 6. Espaço para o Logo */}
-          <h1 className="text-4xl font-bold tracking-wider text-brand-blue">PREMIER CLEAN</h1>
+          <h1 className="text-4xl font-bold tracking-wider text-brand-blue">EXTREMA LIMPEZA</h1>
           <p className="text-gray-400 mt-2">Higienização de Estofados</p>
         </div>
 

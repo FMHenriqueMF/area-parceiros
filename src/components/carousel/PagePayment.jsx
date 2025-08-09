@@ -1,10 +1,11 @@
 // src/components/carousel/PagePayment.jsx
 
 import React, { useState } from 'react';
-import { FiDollarSign, FiArrowLeft, FiSend } from 'react-icons/fi';
+import { FiDollarSign, FiArrowLeft, FiCamera, FiCheckCircle } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db, storage } from '../../firebase'; // Adicionado 'storage'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Adicionado para lidar com o upload da imagem
 import { logUserActivity } from '../../utils/logger';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../LoadingSpinner';
@@ -43,7 +44,6 @@ const PagePayment = ({ clientData, onPrev }) => {
         throw new Error(`Erro na API do Make: ${response.statusText}`);
       }
       
-      console.log(`Link de pagamento enviado para: ${phone} via webhook.`);
       
       const clientRef = doc(db, "clientes", clientData.id);
       await updateDoc(clientRef, { status: 'aguardandopagamento' });
@@ -59,17 +59,31 @@ const PagePayment = ({ clientData, onPrev }) => {
     }
   };
 
-  const handleSaveExtraInfoAndSendPayment = async () => {
+  const handleSaveExtraInfo = async () => {
     setActionLoading(true);
     try {
       const clientRef = doc(db, 'clientes', clientData.id);
       await updateDoc(clientRef, { RelatotecnicoItens: extraInfo });
       toast.success('Relatório salvo com sucesso!');
       logUserActivity(currentUser.uid, 'SALVOU_RELATORIO_TECNICO', { clienteId: clientData.id });
-      await sendPaymentLink(clientData.telefone_cliente);
     } catch (error) {
       console.error("Erro ao salvar informações extras:", error);
       toast.error("Não foi possível salvar o relatório.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSendPayment = async () => {
+    setActionLoading(true);
+    try {
+      const clientRef = doc(db, 'clientes', clientData.id);
+      logUserActivity(currentUser.uid, 'ENVIOU_LINK_DE_PAGAMENTO', { clienteId: clientData.id });
+      await sendPaymentLink(clientData.telefone_cliente);
+      setShowAltPayment(true)
+    } catch (error) {
+      console.error("Erro ao enviar o Link:", error);
+      toast.error("Não foi possível enviar o Link de pagamento.");
     } finally {
       setActionLoading(false);
     }
@@ -82,26 +96,46 @@ const PagePayment = ({ clientData, onPrev }) => {
         <span>Finalizar Atendimento</span>
       </h4>
       <div className="space-y-4">
-        <div>
-          <p className="font-bold text-lg mb-2">Relatório Técnico:</p>
-          <textarea
-            value={extraInfo}
-            onChange={(e) => setExtraInfo(e.target.value)}
-            className="w-full p-2 rounded bg-gray-800 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm"
-            placeholder="Adicionar relatório técnico do atendimento..."
-            rows={3}
-          />
-        </div>
+        
+        {!showAltPayment && (
+          <>
+            <div>
+              <p className="font-bold text-lg mb-2">Relatório Técnico:</p>
+              <textarea
+                value={extraInfo}
+                onChange={(e) => setExtraInfo(e.target.value)}
+                className="w-full p-2 rounded bg-gray-800 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm"
+                placeholder="Adicionar relatório técnico do atendimento..."
+                rows={3}
+              />
+
+              <button
+                onClick={handleSaveExtraInfo}
+                className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300"
+              >
+                <FiSend size={16} className="inline mr-2" />  
+                Enviar Relatório
+              </button>
+            </div>
+            
+ 
+          </>
+        )}
+        
         {!showAltPayment ? (
           <button
-            onClick={handleSaveExtraInfoAndSendPayment}
+            onClick={handleSendPayment}
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed flex justify-center items-center"
             disabled={actionLoading}
+          
           >
             {actionLoading ? <LoadingSpinner /> : 'Enviar Link de Pagamento'}
           </button>
         ) : (
           <div className="mt-6 space-y-4">
+                        <p className="text-center text-lg font-semibold text-yellow-300 ">Link de Pagamento Enviado ao Cliente</p>
+                        <p className=" text-center italic text-sm font-normal text-yellow-300 ">Caso o cliente não consiga clicar no link, é necessário que ele salve o contato</p>
+
             <p className="text-lg font-semibold text-white">Outra pessoa realizará o pagamento?</p>
             <div className="relative">
               <input
@@ -122,15 +156,17 @@ const PagePayment = ({ clientData, onPrev }) => {
           </div>
         )}
       </div>
-      <div className="flex justify-start mt-6">
-        <button
-          onClick={onPrev}
-          className="flex items-center space-x-2 bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300 hover:bg-gray-500"
-        >
-          <FiArrowLeft size={20} />
-          <span>Voltar</span>
-        </button>
-      </div>
+       {!showAltPayment && (
+        <div className="flex justify-start mt-6">
+          <button
+            onClick={onPrev}
+            className="flex items-center space-x-2 bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300 hover:bg-gray-500"
+          >
+            <FiArrowLeft size={20} />
+            <span>Voltar</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,11 +4,11 @@ import React, { useState, useRef, useEffect } from 'react';
 
 // Conteúdo dos Termos de Serviço
 const TERMOS_DE_SERVICO = `
-### Termos de Parceria para Empresas Parceiras da Premier Clean
+### Termos de Parceria para Empresas Parceiras da Extrema Limpeza
 Última atualização: 02 de agosto de 2025
 
 #### 1. Vínculo Contratual
-A parceria estabelecida com a Premier Clean não gera qualquer tipo de vínculo empregatício. O parceiro atua de forma autônoma e independente, sendo obrigatório que possua formalização como MEI (Microempreendedor Individual) ou CNPJ ativo. A solicitação de parceria está sujeita a uma avaliação interna antes da aprovação para acesso ao sistema.
+A parceria estabelecida com a Extrema Limpeza não gera qualquer tipo de vínculo empregatício. O parceiro atua de forma autônoma e independente, sendo obrigatório que possua formalização como MEI (Microempreendedor Individual) ou CNPJ ativo. A solicitação de parceria está sujeita a uma avaliação interna antes da aprovação para acesso ao sistema.
 
 #### 2. Responsabilidade Técnica e Qualidade do Serviço
 O parceiro é integralmente responsável pela excelência na execução do serviço de higienização e pela qualidade final do trabalho. Em caso de reclamação do cliente, serviço mal executado, ou qualquer tipo de dano causado durante o atendimento, o parceiro será diretamente responsável pela resolução, incluindo reparações, reexecuções ou reembolsos.
@@ -18,39 +18,39 @@ A reputação do parceiro é crucial e é avaliada por meio de um sistema de pon
 * Nota de Qualidade: Reflete a satisfação do cliente com o serviço.
 * Nota de Confiabilidade: Mede o compromisso do parceiro com os serviços agendados.
 * Nota de Garantia: Avalia a durabilidade e qualidade do trabalho, baseada na necessidade de retornos.
-A nota final do parceiro determinará seu nível de acesso na plataforma, que influencia o número de serviços que podem ser aceitos por dia e por turno. A Premier Clean reserva-se o direito de suspender ou excluir parceiros com base na sua nota de reputação.
+A nota final do parceiro determinará seu nível de acesso na plataforma, que influencia o número de serviços que podem ser aceitos por dia e por turno. A Extrema Limpeza reserva-se o direito de suspender ou excluir parceiros com base na sua nota de reputação.
 
 #### 4. Estado Probatório
 Parceiros com menos de 20 notas de confiabilidade são considerados em Estado Probatório. Durante este período, a nota final unificada será a menor pontuação dentre as três métricas (Qualidade, Confiabilidade e Garantia). Além disso, a acumulação de duas ou mais notas 1 no histórico de confiabilidade resultará no banimento imediato da plataforma. Este período tem como objetivo garantir o comprometimento e a qualidade dos serviços desde o início da parceria.
 
 #### 5. Conta do Usuário e Privacidade
-Para acessar o aplicativo, o parceiro deve criar uma conta. É de sua responsabilidade manter a confidencialidade das credenciais de acesso. O parceiro é responsável por todas as atividades que ocorrem em sua conta. A Premier Clean coleta dados para otimizar o uso do aplicativo e pode capturar a localização do parceiro durante o uso para fins operacionais, conforme detalhado na Política de Privacidade.
+Para acessar o aplicativo, o parceiro deve criar uma conta. É de sua responsabilidade manter a confidencialidade das credenciais de acesso. O parceiro é responsável por todas as atividades que ocorrem em sua conta. A Extrema Limpeza coleta dados para otimizar o uso do aplicativo e pode capturar a localização do parceiro durante o uso para fins operacionais, conforme detalhado na Política de Privacidade.
 
 #### 6. Conteúdo do Usuário
 O parceiro pode publicar, vincular, armazenar e compartilhar conteúdo (texto, gráficos, vídeos ou outros materiais) no aplicativo. O parceiro é legalmente responsável pelo conteúdo que publica, incluindo sua legalidade, confiabilidade e adequação.
 
 #### 7. Propriedade Intelectual
-O aplicativo e seu conteúdo original, recursos e funcionalidades são de propriedade exclusiva da Premier Clean. O aplicativo é protegido por direitos autorais, marcas registradas e outras leis.
+O aplicativo e seu conteúdo original, recursos e funcionalidades são de propriedade exclusiva da Extrema Limpeza. O aplicativo é protegido por direitos autorais, marcas registradas e outras leis.
 
 #### 8. Limitação de Responsabilidade
-Em nenhuma circunstância, a Premier Clean, seus diretores, funcionários, parceiros, agentes ou fornecedores, será responsável por quaisquer danos diretos, indiretos, incidentais, especiais, consequenciais ou punitivos, incluindo, mas não se limitando a, perda de lucros, dados ou outras perdas intangíveis.
+Em nenhuma circunstância, a Extrema Limpeza, seus diretores, funcionários, parceiros, agentes ou fornecedores, será responsável por quaisquer danos diretos, indiretos, incidentais, especiais, consequenciais ou punitivos, incluindo, mas não se limitando a, perda de lucros, dados ou outras perdas intangíveis.
 
 #### 9. Pontualidade e Compromisso
 A pontualidade é essencial. Cancelamentos de serviços com menos de 6 horas de antecedência ou não comparecimentos resultarão em uma nota 1 no histórico de confiabilidade do parceiro. Caso o parceiro acumule duas notas 1, seu acesso será imediatamente suspenso da plataforma.
 
 #### 10. Modificações e Vigência dos Termos
-A Premier Clean reserva o direito de modificar estes termos a qualquer momento. Em caso de atualização, o parceiro será notificado e deverá aceitar os novos termos para continuar utilizando a plataforma. A continuidade do uso do aplicativo após a notificação será considerada como aceitação integral dos novos termos.
+A Extrema Limpeza reserva o direito de modificar estes termos a qualquer momento. Em caso de atualização, o parceiro será notificado e deverá aceitar os novos termos para continuar utilizando a plataforma. A continuidade do uso do aplicativo após a notificação será considerada como aceitação integral dos novos termos.
 
 Ao utilizar o aplicativo, o parceiro declara ter lido, compreendido e concordado com todos os termos e condições aqui presentes.
 `;
 
 // Conteúdo da Política de Privacidade
 const POLITICA_DE_PRIVACIDADE = `
-### Política de Privacidade da Premier Clean
+### Política de Privacidade da Extrema Limpeza
 Última atualização: 02 de agosto de 2025
 
 #### 1. Introdução
-Esta Política de Privacidade descreve como a Premier Clean, proprietária do aplicativo para parceiros, coleta, usa, armazena e protege as informações de nossos usuários. Ao utilizar nosso aplicativo, você concorda com esta política e com a coleta e uso de suas informações conforme descrito aqui.
+Esta Política de Privacidade descreve como a Extrema Limpeza, proprietária do aplicativo para parceiros, coleta, usa, armazena e protege as informações de nossos usuários. Ao utilizar nosso aplicativo, você concorda com esta política e com a coleta e uso de suas informações conforme descrito aqui.
 
 #### 2. Informações que Coletamos
 Coletamos as seguintes informações para fornecer e melhorar nossos serviços:

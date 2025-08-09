@@ -16,7 +16,6 @@ export const requestNotificationPermission = async (userId) => {
     const permission = await Notification.requestPermission();
 
     if (permission === "granted") {
-      console.log("Permissão para notificação concedida.");
 
       // Pega o token do dispositivo.
       const currentToken = await getToken(messaging, {
@@ -24,8 +23,6 @@ export const requestNotificationPermission = async (userId) => {
       });
 
       if (currentToken) {
-        console.log("Token do dispositivo:", currentToken);
-        console.log("Tentando salvar o token para o usuário com ID:", userId); // <-- LOG DE DEBUG
 
         // Bloco try/catch específico para a operação com o Firestore
         try {
@@ -36,7 +33,6 @@ export const requestNotificationPermission = async (userId) => {
             fcmTokens: arrayUnion(currentToken),
           });
 
-          console.log("%cToken salvo no Firestore com sucesso!", "color: green; font-weight: bold;"); // <-- LOG DE SUCESSO
 
         } catch (firestoreError) {
           console.error("### ERRO AO SALVAR NO FIRESTORE ###");
@@ -47,15 +43,12 @@ export const requestNotificationPermission = async (userId) => {
         }
 
       } else {
-        console.log("Não foi possível obter o token de registro. Permissão foi concedida?");
       }
     } else {
-      console.log("Permissão para notificação negada.");
     }
 
     // Ouve por mensagens enquanto o app está em primeiro plano
     onMessage(messaging, (payload) => {
-        console.log('Mensagem recebida em primeiro plano: ', payload);
         // Aqui você pode mostrar um toast ou um alerta customizado dentro do app
         alert(payload.notification.title + "\n" + payload.notification.body);
     });

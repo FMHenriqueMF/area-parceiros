@@ -88,7 +88,6 @@ export function AuthProvider({ children }) {
                 }
                 const expectedFinalScoreClamped = parseFloat(Math.max(0, Math.min(10, expectedFinalScore)).toFixed(2));
                 if (nota_final_unificada !== expectedFinalScoreClamped) {
-                  console.log(`JUIZ-VIGIA: Inconsistência detectada para ${user.uid}. Corrigindo...`);
                   isUpdating.current = true;
                   await recalculateAndSaveScore(db, user.uid, {});
                   setTimeout(() => { isUpdating.current = false; }, 200);

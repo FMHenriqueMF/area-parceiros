@@ -69,7 +69,6 @@ export const recalculateAndSaveScore = async (db, partnerId, updatedHistories) =
     };
 
     await updateDoc(partnerRef, updatePayload);
-    console.log(`QG DO BATMAN: Notas recalculadas e salvas para ${partnerId}. Nova nota final: ${finalScoreClamped}`);
 };
 
 

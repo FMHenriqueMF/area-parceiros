@@ -379,7 +379,7 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
       {showHistoryModal && renderHistoryModal()}
       <h1 className="text-3xl md:text-4xl font-extrabold text-blue-900 mb-6 text-center md:text-left">{parceiroInfo.nome_empresa}</h1>
       {view === 'dashboard' ? renderDashboard() : renderSolicitacao()}
-      <div className="text-center mt-8 text-xs text-gray-400 tracking-wide">Premier Clean &copy; {new Date().getFullYear()}</div>
+      <div className="text-center mt-8 text-xs text-gray-400 tracking-wide">Extrema Limpeza &copy; {new Date().getFullYear()}</div>
     </div>
   );
 }

@@ -1,57 +1,97 @@
 // src/components/carousel/PageConfirmItems.jsx
 
 import React, { useState, useEffect } from 'react';
-import { FiEdit, FiXCircle, FiPlusCircle, FiMinusCircle } from 'react-icons/fi';
+import { FiEdit, FiMinus, FiPlus, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { doc, updateDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { logUserActivity } from '../../utils/logger';
 import { useAuth } from '../../context/AuthContext';
+import ActionConfirmationModal from '../ActionConfirmationModal';
 import LoadingSpinner from '../LoadingSpinner';
+import Almofadas from '../../icones/Almofadas.png';
+import BebeConforto from '../../icones/BebeConforto.png';
+import Box from '../../icones/Box.png';
+import Cadeiras from '../../icones/Cadeiras.png';
+import CantoAlemão from '../../icones/CantoAlemão.png';
+import CarrinhoDeBebê from '../../icones/CarrinhoDeBebê.png';
+import Carro from '../../icones/Carro.png';
+import Colchão from '../../icones/Colchão.png';
+import Divã from '../../icones/Divã.png';
+import Namoradeiras from '../../icones/Namoradeiras.png';
+import Onibus from '../../icones/Onibus.png';
+import Poltronas from '../../icones/Poltronas.png';
+import Puff from '../../icones/Puff.png';
+import Recamier from '../../icones/Recamier.png';
+import Sofá from '../../icones/Sofá.png';
+import Cabeceiras from '../../icones/Cabeceiras.png';
 
-// Mapeamento de ícones para as categorias para um visual mais lúdico
 const categoryIcons = {
-  Sofá: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M11 20H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-7L11 20zM11 20V6m-7 0h16v12H4z" /><line x1="8" y1="10" x2="8" y2="16" /><line x1="16" y1="10" x2="16" y2="16" /></svg>,
-  Colchão: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h20a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2zM6 10v4m6-4v4m6-4v4" /><circle cx="6" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="18" cy="12" r="1" /></svg>,
-  Cadeiras: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2v2H10V4a2 2 0 0 1 2-2zM4 14v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6H4zM22 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2h-4V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2H22z" /></svg>,
-  Poltronas: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 10a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v6zM4 10a2 2 0 0 0-2 2h1a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-1a2 2 0 0 0-2 2v6zM22 17H2v-4h20v4zM22 22H2v-2h20v2z" /></svg>,
-  Cabeceiras: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 0 1 10 10v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a10 10 0 0 1 10-10zM12 2v20M2 12h20" /></svg>,
-  Puff: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 12v6m0-6V6m0 6H6m6 0h6" /></svg>,
+  Sofá: <img src={Sofá} className="h-14 w-15" alt="Sofá" />,
+  Almofadas: <img src={Almofadas} className="h-14 w-15" alt="Almofadas" />,
+  Cadeiras: <img src={Cadeiras} className="h-14 w-15" alt="Cadeiras" />,
+  Puff: <img src={Puff} className="h-14 w-15" alt="Puff" />,
+  Poltronas: <img src={Poltronas} className="h-14 w-15" alt="Poltronas" />,
+  Divã: <img src={Divã} className="h-14 w-  15" alt="Divã" />,
+  Recamier: <img src={Recamier} className="h-14 w-15" alt="Recamier" />,
+  CantoAlemão: <img src={CantoAlemão} className="h-14 w-15" alt="Canto Alemão" />,
+  BebeConforto: <img src={BebeConforto} className="h-14 w-15" alt="Bebê Conforto" />,
+  CarrinhoDeBebê: <img src={CarrinhoDeBebê} className="h-14 w-15" alt="Carrinho de Bebê" />,
+  Carro: <img src={Carro} className="h-14 w-15" alt="Carro" />,
+  Colchão: <img src={Colchão} className="h-14 w-15" alt="Colchão" />,
+  Box: <img src={Box} className="h-14 w-15" alt="Box" />,
+  Namoradeiras: <img src={Namoradeiras} className="h-14 w-15" alt="Namoradeiras" />,
+  Onibus: <img src={Onibus} className="h-14 w-15" alt="Ônibus" />,
+  default: <FiEdit size={24} className="text-gray-400" />,  
+  Cabeceiras: <img src={Cabeceiras} className="h-14 w-15" alt="Cabeceiras" />, // Ícone para Cabeceiras
+
+  // Ícone padrão para categorias não especificadas
+
+
 };
 
 
-const PageConfirmItems = ({ clientData, onNext }) => {
+const PageConfirmItems = ({ clientData, onNext, onPrev }) => {
   const { currentUser } = useAuth();
   const [actionLoading, setActionLoading] = useState(false);
   const [services, setServices] = useState([]);
   const [servicesByCategory, setServicesByCategory] = useState({});
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedItems, setSelectedItems] = useState({});
+  const [showItemModal, setShowItemModal] = useState(false);
+
+  const originalValorParceiro = clientData.valor_totalNUM * (clientData.parceiropercentual / 100);
+
+  const newTotalPrice = Object.values(selectedItems).reduce((total, item) => 
+    total + (item.valor_desconto * item.quantidade || 0), 0
+  );
+  const newValorParceiro = newTotalPrice * (clientData.parceiropercentual / 100);
+
 
   useEffect(() => {
     const fetchServices = async () => {
-      const querySnapshot = await getDocs(collection(db, 'orcamento'));
-      const allServices = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const groupedServices = allServices.reduce((acc, service) => {
-        acc[service.categoria] = acc[service.categoria] || [];
-        acc[service.categoria].push(service);
-        return acc;
-      }, {});
-      setServices(allServices);
-      setServicesByCategory(groupedServices);
-      
-      const initialItemsArray = typeof clientData.itens_cliente === 'string' 
-        ? clientData.itens_cliente.split(',').map(item => item.trim())
-        : clientData.itens_cliente;
-
-      const initialItemsObject = initialItemsArray.reduce((acc, itemName) => {
-        const service = allServices.find(s => s.item === itemName);
-        if (service) {
-          acc[itemName] = { ...service, quantidade: (acc[itemName]?.quantidade || 0) + 1 };
-        }
-        return acc;
-      }, {});
-      setSelectedItems(initialItemsObject);
+      try {
+        const querySnapshot = await getDocs(collection(db, 'orcamento'));
+        const allServices = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const groupedServices = allServices.reduce((acc, service) => {
+          acc[service.categoria] = acc[service.categoria] || [];
+          acc[service.categoria].push(service);
+          return acc;
+        }, {});
+        setServices(allServices);
+        setServicesByCategory(groupedServices);
+        
+        const initialItemsObject = clientData.itens_cliente.reduce((acc, itemName) => {
+          const service = allServices.find(s => s.item === itemName);
+          if (service) {
+            acc[itemName] = { ...service, quantidade: (acc[itemName]?.quantidade || 0) + 1 };
+          }
+          return acc;
+        }, {});
+        setSelectedItems(initialItemsObject);
+      } catch (error) {
+        console.error('Erro ao buscar serviços:', error);
+      }
     };
     fetchServices();
   }, [clientData.itens_cliente]);
@@ -59,54 +99,61 @@ const PageConfirmItems = ({ clientData, onNext }) => {
   const handleSelectItem = (service) => {
     setSelectedItems(prevItems => {
       const existingItem = prevItems[service.item];
-      return {
-        ...prevItems,
-        [service.item]: {
-          ...service,
-          quantidade: (existingItem?.quantidade || 0) + 1,
-        },
-      };
-    });
-  };
-
-  const handleRemoveItem = (itemToRemove) => {
-    setSelectedItems(prevItems => {
       const newItems = { ...prevItems };
-      if (newItems[itemToRemove.item].quantidade > 1) {
-        newItems[itemToRemove.item].quantidade -= 1;
+      if (existingItem) {
+        // Se o item já existe, incrementa em 1.
+        newItems[service.item] = { ...existingItem, quantidade: existingItem.quantidade + 1 };
       } else {
-        delete newItems[itemToRemove.item];
+        // Se o item não existe, adiciona ele com quantidade 1.
+        newItems[service.item] = { ...service, quantidade: 1 };
       }
       return newItems;
     });
   };
+
+  const handleQuantityChange = (item, action) => {
+    setSelectedItems(prevItems => {
+        const newItems = { ...prevItems };
+        const currentItem = newItems[item.item];
+
+        if (!currentItem) return prevItems;
+
+        if (action === 'increase') {
+            currentItem.quantidade += 1;
+        } else if (action === 'decrease') {
+            if (currentItem.quantidade > 1) {
+                currentItem.quantidade -= 1;
+            } else {
+                delete newItems[item.item];
+            }
+        }
+        return newItems;
+    });
+};
   
   const handleConfirmService = async () => {
-    const newItemsArray = Object.values(selectedItems).flatMap(item => 
-      Array(item.quantidade).fill(item.item)
-    );
-    const newTotalPrice = Object.values(selectedItems).reduce((total, item) => 
-      total + (item.valor_desconto * item.quantidade || 0), 0
-    );
-
-    if (newTotalPrice < clientData.parceiropercentual) {
-      toast.error('O novo valor não pode ser menor que o original. Alterações com orçamento menor precisam ser comunicadas ao suporte.');
+    if (newValorParceiro < originalValorParceiro) {
+      alert('O novo valor para você não pode ser menor que o original. Alterações com orçamento menor precisam ser comunicadas ao suporte.')
+      toast.error('O novo valor para você não pode ser menor que o original. Alterações com orçamento menor precisam ser comunicadas ao suporte.');
       return;
     }
+    
     setActionLoading(true);
     try {
       const clientRef = doc(db, 'clientes', clientData.id);
       const updatePayload = {
         servico_confirmado: true,
-        itens_cliente: newItemsArray,
-        parceiropercentual: newTotalPrice,
+        itens_cliente: Object.values(selectedItems).flatMap(item => 
+          Array(item.quantidade).fill(item.item)
+        ),
+        valor_totalNUM: newTotalPrice,
       };
       await updateDoc(clientRef, updatePayload);
-      logUserActivity(currentUser.uid, 'Confirmou os itens do serviço', { clienteId: clientData.id, newItems: newItemsArray, newPrice: newTotalPrice });
+      logUserActivity(currentUser.uid, 'Confirmou os itens do serviço', { clienteId: clientData.id, newItems: updatePayload.itens_cliente, newPrice: newTotalPrice });
       toast.success('Itens atualizados com sucesso!');
       onNext();
     } catch (error) {
-      console.error("Erro ao atualizar o serviço:", error);
+      console.error("handleConfirmService: Erro ao atualizar o serviço:", error);
       toast.error('Não foi possível atualizar o serviço.');
     } finally {
       setActionLoading(false);
@@ -114,70 +161,129 @@ const PageConfirmItems = ({ clientData, onNext }) => {
   };
 
   return (
-    <div className="flex flex-col space-y-6 p-4">
-      <h4 className="text-3xl font-bold text-white text-center">Alterar itens do serviço</h4>
-      <p className="text-gray-400 text-center">Ajuste o orçamento selecionando as categorias e itens abaixo.</p>
+    <div className="flex flex-col h-screen bg-gray-900 text-white">
+      {/* CABEÇALHO FIXO E LIMPO */}
+      <div className="p-4 bg-gray-800 border-b border-gray-700">
+        <h4 className="text-3xl font-bold text-center">Ajustar Orçamento</h4>
+        <p className="text-gray-400 text-center text-sm">Adicione ou remova itens do serviço.</p>
+      </div>
 
-      {/* Seção do Pedido (Visual novo e limpo) */}
-      <div className="bg-gray-800 p-4 rounded-lg min-h-[80px]">
-        <div className="flex flex-wrap gap-2 text-sm">
-          {Object.values(selectedItems).length > 0 ? (
-            Object.values(selectedItems).map((item, index) => (
-              <span key={index} className="flex items-center space-x-2 bg-go-green/20 text-go-green rounded-full px-3 py-1 font-medium transition-all duration-300">
-                <span>{item.item}</span>
-                <span className="font-bold">{item.quantidade}x</span>
-                <button onClick={() => handleRemoveItem(item)} className="p-1 hover:text-red-500 transition-colors">
-                  <FiXCircle size={14} />
-                </button>
-              </span>
-            ))
-          ) : (
-            <p className="text-gray-500">Nenhum item selecionado.</p>
-          )}
+      {/* CONTEÚDO PRINCIPAL (COM SCROLL) */}
+      <div className="flex-1 overflow-y-auto p-4 pb-20"> {/* Padding bottom para não esconder os botões fixos */}
+
+        {/* PAINEL DE ITENS SELECIONADOS */}
+        <div className="mb-6">
+          <h5 className="text-lg font-semibold text-gray-300 mb-2">Itens Selecionados:</h5>
+          <div className="space-y-2">
+            {Object.values(selectedItems).length > 0 ? (
+              Object.values(selectedItems).map((item, index) => (
+                <div key={index} className="flex items-center justify-between text-lg py-1">
+                  <span className="text-gray-200">
+                    <span className="font-bold mr-2">{item.quantidade}x</span>
+                    {item.item}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleQuantityChange(item, 'decrease')} className="p-1 rounded-full text-white hover:bg-slate-600 transition-colors">
+                      <FiMinus size={20} />
+                    </button>
+                    <button onClick={() => handleQuantityChange(item, 'increase')} className="p-1 rounded-full text-white hover:bg-slate-600 transition-colors">
+                      <FiPlus size={20} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 italic text-md">Nenhum item selecionado.</p>
+            )}
+          </div>
+        </div>
+
+        {/* PAINEL DE SELEÇÃO DE ITENS COM MODAL */}
+        <div className="bg-gray-800 p-4 rounded-lg">
+          <h5 className="text-lg font-semibold text-gray-300 mb-4">Adicionar Itens:</h5>
+          
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {Object.keys(servicesByCategory).map(category => (
+              <button
+                key={category}
+                onClick={() => {
+                  setActiveCategory(category);
+                  setShowItemModal(true);
+                }}
+                className={`flex-shrink-0 flex flex-col items-center justify-center h-28 rounded-xl font-semibold transition-all duration-300 ${
+                  activeCategory === category 
+                    ? 'bg-sky-600 text-white shadow-xl transform scale-105' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                <div className={`transition-colors mb-2 ${activeCategory === category ? 'text-white' : 'text-sky-400'}`}>
+                  {categoryIcons[category] || <FiEdit size={24} />}
+                </div>
+                <span className="text-sm">{category}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Row 1: Categorias com ícones */}
-      <div className="flex overflow-x-auto space-x-2 pb-2 -mx-4 px-4">
-        {Object.keys(servicesByCategory).map(category => (
-          <button
-            key={category}
-            onClick={() => setActiveCategory(category)}
-            className={`flex-shrink-0 flex flex-col items-center justify-center w-24 h-20 rounded-lg font-semibold transition duration-300 ${activeCategory === category ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-          >
-            {categoryIcons[category] || <FiEdit size={24} />}
-            <span className="mt-2 text-xs">{category}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Row 2: Itens da Categoria Selecionada */}
-      {activeCategory && (
-        <div className="flex flex-wrap gap-2 justify-center mt-4">
-          {servicesByCategory[activeCategory].map(service => (
+      {/* MODAL DE SELEÇÃO DE ITENS */}
+      {showItemModal && activeCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg max-h-[90vh] overflow-y-auto w-full max-w-md p-6 relative">
             <button
-              key={service.id}
-              onClick={() => handleSelectItem(service)}
-              className={`px-4 py-2 rounded-lg font-semibold transition duration-300 ${selectedItems[service.item] ? 'bg-go-green text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+              onClick={() => setShowItemModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
             >
-              {service.item}
+              <FiX size={24} />
             </button>
-          ))}
+            <h5 className="text-xl font-bold text-white text-center mb-6">
+              Itens de <span className="text-sky-400">{activeCategory}</span>
+            </h5>
+            <div className="grid grid-cols-2 gap-y-4 gap-x-3">
+              {servicesByCategory[activeCategory]?.map(service => (
+                <button
+                  key={service.id}
+                  onClick={() => handleSelectItem(service)}
+                  className={`flex flex-col items-center justify-center p-4 rounded-xl font-semibold text-sm text-center transition duration-300 transform hover:scale-105 ${
+                    selectedItems[service.item] 
+                      ? 'bg-emerald-500 text-white shadow-md' 
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  } break-words`}
+                >
+                  <span className="block">{service.item}</span>
+                  {selectedItems[service.item]?.quantidade > 0 && (
+                    <span className="mt-1 px-2 py-1 bg-white/20 text-xs rounded-full">
+                      {selectedItems[service.item].quantidade}x
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <button
+                onClick={() => setShowItemModal(false)}
+                className="mt-6 w-full bg-sky-600 text-white font-bold py-3 rounded-lg hover:bg-sky-500 transition-colors"
+            >
+                Concluir
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Botões de Ação */}
-      <div className="flex justify-between space-x-4 mt-8">
+      {/* RODAPÉ FIXO COM OS BOTÕES DE AÇÃO */}
+      <div className="fixed bottom-0 left-0 w-full p-4 bg-gray-900 border-t border-gray-800 flex justify-between space-x-4">
         <button
-          onClick={() => onNext()}
-          className="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition duration-300 hover:bg-red-500"
+          onClick={() => {
+            onNext();
+            setActiveCategory(null);
+          }}
+          className="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 hover:bg-red-500"
         >
           Cancelar
         </button>
         <button
           onClick={handleConfirmService}
-          disabled={actionLoading || Object.values(selectedItems).length === 0}
-          className="w-full bg-brand-blue text-white font-bold py-3 px-6 rounded-lg text-lg transition duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed flex justify-center items-center"
+          disabled={actionLoading}
+          className="w-full bg-sky-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed flex justify-center items-center"
         >
           {actionLoading ? <LoadingSpinner /> : 'Concluir Edição'}
         </button>

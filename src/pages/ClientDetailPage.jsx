@@ -1,6 +1,6 @@
 // src/pages/ClientDetailPage.jsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // Adicionado useCallback
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc, collection, getDocs, query, where, orderBy, runTransaction, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -19,6 +19,7 @@ import { toast } from 'react-toastify';
 import ActionCarousel from '../components/ActionCarousel';
 import { FiEdit } from 'react-icons/fi';
 import { MdOutlineCalendarToday, MdOutlineLocationOn, MdFormatListBulleted, MdInfoOutline, MdAttachMoney } from 'react-icons/md';
+import { getDoc } from 'firebase/firestore'; 
 
 const CHECKLIST_STEPS = {
   START: 'start',
@@ -70,6 +71,11 @@ function ClientDetailPage() {
 
   const timerRef = useRef(null);
   
+  const handleItemsChange = useCallback((items, price) => {
+    setNewItems(items);
+    setNewTotalPrice(price);
+  }, []);
+
   useEffect(() => {
     if (isOwner && isDetailsExpanded && cliente?.status === 'cheguei') {
       if (timerRef.current) {
@@ -87,17 +93,27 @@ function ClientDetailPage() {
   }, [isDetailsExpanded, cliente, isOwner]);
 
   useEffect(() => {
+    if (!id || !currentUser) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    if (!id) return;
+
     const docRef = doc(db, 'clientes', id);
     const unsubscribe = onSnapshot(docRef, async (docSnap) => {
       if (docSnap.exists()) {
         const clientData = { id: docSnap.id, ...docSnap.data() };
+        
         if (!clientData.turno && clientData.hora) {
           clientData.turno = getTurnoByHora(clientData.hora);
         }
+        
         setCliente(clientData);
         setExtraInfo(clientData.RelatotecnicoItens || '');
+        setNewItems(clientData.itens_cliente);
+        setNewTotalPrice(clientData.parceiropercentual);
+
         if (clientData.status === 'finalizado') {
           if (!clientData.nota_atualizada) {
             await addReliabilityEvent(db, currentUser.uid, 10.0);
@@ -106,9 +122,7 @@ function ClientDetailPage() {
           }
           setShowPaymentSuccessModal(true);
           setChecklistStep(null);
-        }
-
-        if (!showAltPayment && clientData.status !== 'aguardandopagamento') {
+        } else if (!showAltPayment && clientData.status !== 'aguardandopagamento') {
           if (clientData.status === 'cheguei') {
             const checklistStepsOrder = ['servico_confirmado', 'fotos_antes', 'fotos_depois', 'RelatotecnicoItens'];
             const currentStepIndex = checklistStepsOrder.findIndex(key => !clientData[key]);
@@ -124,6 +138,58 @@ function ClientDetailPage() {
         } else if (clientData.status === 'aguardandopagamento') {
           setChecklistStep(null);
         }
+
+        // >>>>>>>>>>>>>>>>>> LÓGICA DE PERMISSÃO UNIFICADA <<<<<<<<<<<<<<<<<<<<
+        if (clientData.status === 'disponivel') {
+          try {
+            const permissions = await getPartnerPermissions(currentUser.nota_final_unificada);
+            if (!permissions.canAccept) {
+              setCanAcceptJob({ can: false, reason: permissions.message });
+              setDailyJobCount({ accepted: 0, limit: permissions.dailyLimit });
+              setLoading(false); // Adicionado para parar de carregar
+              return;
+            }
+
+            const servicosRef = collection(db, 'clientes');
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
+            const dailyQuery = query(servicosRef,
+              where("aceito_por_uid", "==", currentUser.uid),
+              where("aceito_em", ">=", startOfToday),
+              orderBy("aceito_em")
+            );
+            const dailySnapshot = await getDocs(dailyQuery);
+            const jobsAcceptedToday = dailySnapshot.size;
+
+            if (jobsAcceptedToday >= permissions.dailyLimit) {
+              setCanAcceptJob({ can: false, reason: `Você já atingiu seu limite diário de ${permissions.dailyLimit} serviço(s). Aumente sua nota para aumentar seu limite, mais informações na sua página de Perfil.` });
+              setDailyJobCount({ accepted: jobsAcceptedToday, limit: permissions.dailyLimit });
+            } else {
+              const turnQuery = query(servicosRef,
+                where("aceito_por_uid", "==", currentUser.uid),
+                where("data", "==", clientData.data),
+                where("turno", "==", clientData.turno)
+              );
+              const turnSnapshot = await getDocs(turnQuery);
+              const jobsInSameTurn = turnSnapshot.size;
+
+              if (jobsInSameTurn >= permissions.turnLimit) {
+                setCanAcceptJob({ can: false, reason: `Você já atingiu seu limite de ${permissions.turnLimit} serviço(s) para o turno da ${clientData.turno} do dia ${clientData.data}. Aumente sua nota para aumentar seu limite, mais informações na sua página de Perfil.` });
+              } else {
+                setCanAcceptJob({ can: true, reason: '' });
+              }
+              setDailyJobCount({ accepted: jobsAcceptedToday, limit: permissions.dailyLimit });
+            }
+          } catch (error) {
+            console.error("Erro ao obter permissões do parceiro:", error);
+            setCanAcceptJob({ can: false, reason: 'Não foi possível verificar as permissões.' });
+            setDailyJobCount({ accepted: 0, limit: 0 });
+          }
+        } else {
+          setCanAcceptJob({ can: false, reason: 'Serviço não está disponível para aceitação.' });
+          setDailyJobCount({ accepted: 0, limit: 0 });
+        }
       } else {
         setCliente(null);
       }
@@ -132,8 +198,9 @@ function ClientDetailPage() {
       console.error("Erro ao escutar o cliente:", error);
       setLoading(false);
     });
+
     return () => unsubscribe();
-  }, [id, showAltPayment, currentUser, navigate]);
+  }, [id, showAltPayment, currentUser, navigate, db]); // Adicionado 'db'
 
   const handleUpdateStatus = async (newStatus) => {
     if (!currentUser || !cliente) return;
@@ -226,7 +293,7 @@ function ClientDetailPage() {
         nome: cliente?.quem_recebe,
         telefone: phone,
         codigo_cliente: `${id}-${cliente?.aceito_por_uid}`,
-        id_parceiro: cliente?.aceito_por_uid, // Corrigido para concatenar os UIDs
+        id_parceiro: cliente?.aceito_por_uid,
         valor: cliente?.valor_totalNUM,
       };
 
@@ -242,7 +309,6 @@ function ClientDetailPage() {
         throw new Error(`Erro na API do Make: ${response.statusText}`);
       }
 
-      console.log(`Link de pagamento enviado para: ${phone} via webhook.`);
 
       const clientRef = doc(db, "clientes", id);
       await updateDoc(clientRef, { status: 'aguardandopagamento' });
@@ -425,10 +491,12 @@ function ClientDetailPage() {
     serviceDateMessage = `Você poderá iniciar o deslocamento a partir das ${formattedTime} do dia ${formattedDate}.`;
   }
   
-  // --- LÓGICA CORRIGIDA E MAIS SEGURA PARA TRATAR A LISTA DE ITENS ---
-  const itensArray = Array.isArray(cliente?.itens_cliente)
-    ? cliente.itens_cliente.filter(item => item && item.trim() !== '')
-    : [];
+  let itensArray = [];
+  if (Array.isArray(cliente?.itens_cliente)) {
+    itensArray = cliente.itens_cliente.filter(item => item && item.trim() !== '');
+  } else if (typeof cliente?.itens_cliente === 'string' && cliente.itens_cliente.trim() !== '') {
+    itensArray = [cliente.itens_cliente];
+  }
 
 return (
     <>
@@ -490,10 +558,10 @@ return (
                   {cliente?.observacoesAdicionaisCliente && cliente.observacoesAdicionaisCliente !== 'Nenhuma' && cliente.observacoesAdicionaisCliente !== 'a' && (
                       <div className="flex items-start">
                         <MdInfoOutline className="mr-4 text-3xl text-brand-blue flex-shrink-0" />
-                        <p className="text-gray-300 text-lg whitespace-pre-wrap line-clamp-2">{cliente?.observacoesAdicionaisCliente}</p>
-                      </div>
+<p className="text-gray-300 text-lg whitespace-pre-wrap">{cliente?.observacoesAdicionaisCliente}</p>                      </div>
                   )}
                 </div>
+                
                 <div className="mt-8 pt-6 border-t border-gray-800">
                   <div className="bg-green-600 p-4 rounded-lg flex items-center justify-between shadow-md">
                     <p className="flex items-center text-xl font-medium text-white"><MdAttachMoney className="mr-3 text-2xl" /> Valor a Receber:</p>
@@ -509,7 +577,7 @@ return (
               className={`bg-gray-800 p-8 rounded-lg shadow-xl transition-all duration-500 ease-in-out ${isDetailsExpanded ? 'md:col-span-1' : 'md:col-span-2'}`}
             >
               {canViewSensitiveData ? (
-                <h3 className="text-2xl font-bold text-center text-white mb-4">Ações no Local</h3>
+                <h3 className="text-2xl font-bold text-white mb-4">Ações no Local</h3>
               ) : (
                 <p className="text-yellow-500 text-sm italic"> </p>
               )}
@@ -525,7 +593,7 @@ return (
               )}
               {cliente?.status === 'disponivel' && (
                 <>
-                  <p className="text-sm text-gray-400">Serviços aceitos hoje: {dailyJobCount.accepted} / {dailyJobCount.limit === Infinity ? 'Ilimitado' : dailyJobCount.limit}</p>
+                  <p className="text-sm text-gray-400">Serviços aceitos hoje: {dailyJobCount?.accepted} / {dailyJobCount?.limit === Infinity ? 'Ilimitado' : dailyJobCount?.limit}</p>
                   {!actionLoading && !canAcceptJob.can && canAcceptJob.reason && (<p className="text-yellow-500 text-sm pt-2">{canAcceptJob.reason}</p>)}
                   <button
                     onClick={handleClaimJob}

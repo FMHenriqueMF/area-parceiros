@@ -114,7 +114,6 @@ const servicosParaUpload = [
 ];
 
 exports.uploadServicos = async () => {
-  console.log('Iniciando o upload dos serviços...');
   const batch = db.batch();
   servicosParaUpload.forEach((servico) => {
     const docRef = db.collection('orcamento').doc();
@@ -122,5 +121,4 @@ exports.uploadServicos = async () => {
   });
 
   await batch.commit();
-  console.log('Upload concluído!');
 };
