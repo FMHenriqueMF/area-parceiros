@@ -10,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
 const TecPhotos = ({ clientData, onNext, onPrev }) => {
-  const { currentUser } = useAuth();
+const { currentUser } = useAuth();
   const [beforePhotos, setBeforePhotos] = useState(clientData.fotos_antes || []);
   const [afterPhotos, setAfterPhotos] = useState(clientData.fotos_depois || []);
 
@@ -34,44 +34,24 @@ const TecPhotos = ({ clientData, onNext, onPrev }) => {
   };
 
   return (
-    <div className="p-6 bg-gray-900 text-white min-h-screen flex flex-col">
-      <h4 className="text-2xl font-bold mb-6 flex items-center space-x-3 text-brand-blue">
-        <FiCamera size={30} />
+    <div>
+      <div className="flex justify-between mt-12"></div>
+      <h4 className="text-xl font-semibold mb-4 flex items-center space-x-2">
+        <FiCamera size={24} className="text-brand-blue" />
         <span>Fotos do Antes e Depois</span>
+        
       </h4>
-      
-      <div className="flex-grow space-y-8">
-        {/* Bloco para fotos do ANTES */}
-        <div>
-          <label className="block text-gray-400 text-lg font-bold mb-2">Fotos do Antes</label>
-          <PhotoUploader 
-            clienteId={clientData.id} 
-            photoType="before"
-            onUploadComplete={(urls) => handlePhotosUploaded(urls, 'before')} 
-          />
-          {beforePhotos.length > 0 && (
-            <p className="text-gray-400 mt-2 text-center">
-              {beforePhotos.length} fotos salvas.
-            </p>
-          )}
-        </div>
+      <div className="space-y-6">
+        
 
-        {/* Bloco para fotos do DEPOIS */}
+        
         <div>
-          <label className="block text-gray-400 text-lg font-bold mb-2">Fotos do Depois</label>
-          <PhotoUploader 
-            clienteId={clientData.id} 
-            photoType="after"
-            onUploadComplete={(urls) => handlePhotosUploaded(urls, 'after')} 
-          />
-          {afterPhotos.length > 0 && (
-            <p className="text-gray-400 mt-2 text-center">
-              {afterPhotos.length} fotos salvas.
-            </p>
-          )}
+          
+          <PhotoUploader clienteId={clientData.id} onUploadComplete={(urls) => handlePhotosUploaded(urls, 'after')} />
+          {afterPhotos.length > 0 && <p className="text-gray-400 mt-2 text-center">{afterPhotos.length} fotos salvas.</p>}
+        <div className="flex justify-between mt-12"></div>
         </div>
       </div>
-      
       <div className="flex justify-between mt-12">
         <button
           onClick={onPrev}

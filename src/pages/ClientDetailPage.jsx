@@ -1,6 +1,6 @@
 // src/pages/ClientDetailPage.jsx
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'; // Adicionado useCallback
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc, collection, getDocs, query, where, orderBy, runTransaction, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -19,7 +19,7 @@ import { toast } from 'react-toastify';
 import ActionCarousel from '../components/ActionCarousel';
 import { FiEdit } from 'react-icons/fi';
 import { MdOutlineCalendarToday, MdOutlineLocationOn, MdFormatListBulleted, MdInfoOutline, MdAttachMoney } from 'react-icons/md';
-import { getDoc } from 'firebase/firestore'; 
+import { getDoc } from 'firebase/firestore';
 
 const CHECKLIST_STEPS = {
   START: 'start',
@@ -146,7 +146,7 @@ function ClientDetailPage() {
             if (!permissions.canAccept) {
               setCanAcceptJob({ can: false, reason: permissions.message });
               setDailyJobCount({ accepted: 0, limit: permissions.dailyLimit });
-              setLoading(false); // Adicionado para parar de carregar
+              setLoading(false);
               return;
             }
 
@@ -200,7 +200,7 @@ function ClientDetailPage() {
     });
 
     return () => unsubscribe();
-  }, [id, showAltPayment, currentUser, navigate, db]); // Adicionado 'db'
+  }, [id, showAltPayment, currentUser, navigate, db]);
 
   const handleUpdateStatus = async (newStatus) => {
     if (!currentUser || !cliente) return;
@@ -294,7 +294,7 @@ function ClientDetailPage() {
         telefone: phone,
         codigo_cliente: `${id}-${cliente?.aceito_por_uid}`,
         id_parceiro: cliente?.aceito_por_uid,
-        valor: cliente?.valor_totalNUM,
+        valor: cliente?.parceiropercentual,
       };
 
       const response = await fetch(MAKE_WEBHOOK_URL, {
@@ -470,6 +470,42 @@ function ClientDetailPage() {
       setActionLoading(false);
     }
   };
+  const handleFinalizeService = async () => {
+    setActionLoading(true);
+    try {
+      const clientRef = doc(db, 'clientes', id);
+      const userRef = doc(db, 'usuarios', currentUser.uid);
+      
+      const newWeeklyScore = Math.ceil(cliente.valor_totalNUM);
+      
+      await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+          throw "Documento do usuário não encontrado!";
+        }
+        
+        const userData = userDoc.data();
+        const currentWeeklyScore = userData.pontuacao_semanal || 0;
+        
+        transaction.update(userRef, {
+          pontuacao_semanal: currentWeeklyScore + newWeeklyScore,
+        });
+
+        transaction.update(clientRef, {
+          status: 'finalizado',
+        });
+      });
+      
+      await logUserActivity(currentUser.uid, 'FINALIZOU_ATENDIMENTO_PONTUOU_SEMANAL', { clienteId: id, pontuacaoAdicionada: newWeeklyScore });
+      toast.success('Atendimento finalizado e pontuação semanal atualizada!', { position: "bottom-center" });
+      navigate('/agenda');
+    } catch (error) {
+      console.error("Erro ao finalizar o atendimento e pontuar:", error);
+      toast.error("Não foi possível finalizar o atendimento. Tente novamente.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
     if (loading) return <div className="text-white text-center p-10">Carregando detalhes do cliente...</div>;
   if (!cliente) return <div className="text-white text-center p-10">Cliente não encontrado.</div>;
@@ -555,7 +591,7 @@ return (
                     </div>
                   )}
                   
-                  {cliente?.observacoesAdicionaisCliente && cliente.observacoesAdicionaisCliente !== 'Nenhuma' && cliente.observacoesAdicionaisCliente !== 'a' && (
+                  {cliente?.observacoesAdicionaisCliente && cliente.observacoesAdicionaisAdicionaisCliente !== 'Nenhuma' && cliente.observacoesAdicionaisCliente !== 'a' && (
                       <div className="flex items-start">
                         <MdInfoOutline className="mr-4 text-3xl text-brand-blue flex-shrink-0" />
 <p className="text-gray-300 text-lg whitespace-pre-wrap">{cliente?.observacoesAdicionaisCliente}</p>                      </div>

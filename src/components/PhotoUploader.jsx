@@ -75,7 +75,7 @@ function PhotoUploader({ clienteId, onUploadComplete }) {
   return (
     <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
       <label className="block text-sm font-medium text-gray-300 mb-2">
-        Adicionar Fotos (Antes/Depois)
+        Adicionar Fotos 
       </label>
       <input
         type="file"

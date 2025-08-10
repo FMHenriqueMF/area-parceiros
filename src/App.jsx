@@ -17,7 +17,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Agenda from './pages/Agenda.jsx';
 import TecnicoDetailPage from './pages/TecnicoDetailPage.jsx';
-
+import  Info from './pages/InfoPage.jsx'
+import InfoPage from './pages/InfoPage.jsx';
 
 function App() {
   // Agora pegamos o estado de 'loading' também!
@@ -43,6 +44,7 @@ function App() {
         <Route index element={<DashboardPage />} />
         <Route path="lista" element={<ListaPage />} />
               <Route path="cliente/:id" element={<ClientDetailPage />} />
+              <Route path='info' element={<InfoPage/>}/>
 
         <Route path="servico/:id" element={<TecnicoDetailPage />} />
         <Route path="meus-servicos" element={<MeusServicosPage />} />

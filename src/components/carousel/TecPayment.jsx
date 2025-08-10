@@ -1,26 +1,38 @@
 // src/components/carousel/TecPayment.jsx
 
 import React, { useState } from 'react';
-import { FiDollarSign, FiArrowLeft, FiCamera, FiCheckCircle } from 'react-icons/fi';
+import { FiDollarSign, FiArrowLeft, FiCamera,FiSend, FiCheckCircle } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db, storage } from '../../firebase'; // Verifique se 'storage' está sendo exportado do firebase.js
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db} from '../../firebase'; 
 import { logUserActivity } from '../../utils/logger';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../LoadingSpinner';
+import PhotoUploader from '../PhotoUploader';
+
 
 const TecPayment = ({ clientData, onPrev }) => {
   const { currentUser } = useAuth();
   const [extraInfo, setExtraInfo] = useState(clientData.RelatotecnicoItens || '');
   const [serviceValue, setServiceValue] = useState(clientData.valor_totalNUM || '');
   const [paymentMethod, setPaymentMethod] = useState(clientData.forma_pagamento || '');
-  const [proofPhoto, setProofPhoto] = useState(null);
+  const [comprovantePhotos, setPhotos] = useState(clientData.foto_comprovante || []);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const handlePhotoUpload = (e) => {
-    if (e.target.files[0]) {
-      setProofPhoto(e.target.files[0]);
+  const handlePhotosUploaded = async (imageUrls, photoType) => {
+    if (!imageUrls || imageUrls.length === 0) return;
+    try {
+      const clientRef = doc(db, "clientes", clientData.id);
+      const updatePayload = photoType === 'before' ? { fotos_antes: arrayUnion(...imageUrls) } : { fotos_depois: arrayUnion(...imageUrls) };
+      await updateDoc(clientRef, updatePayload);
+      
+      setPhotos(prev => [...prev, ...imageUrls]);
+      
+      toast.success('Fotos enviadas com sucesso!');
+      logUserActivity(currentUser.uid, 'FOTOS_ENVIADAS', { clienteId: clientData.id, photoCount: imageUrls.length, photoType });
+    } catch (error) {
+      console.error("Erro ao salvar URLs das fotos:", error);
+      toast.error('Ocorreu um erro ao salvar as fotos.');
     }
   };
 
@@ -29,11 +41,7 @@ const TecPayment = ({ clientData, onPrev }) => {
     let photoURL = null;
 
     try {
-      if (proofPhoto) {
-        const photoRef = ref(storage, `comprovantes/${clientData.id}/${proofPhoto.name}`);
-        await uploadBytes(photoRef, proofPhoto);
-        photoURL = await getDownloadURL(photoRef);
-      }
+      
 
       const clientRef = doc(db, 'clientes', clientData.id);
       await updateDoc(clientRef, {
@@ -63,7 +71,21 @@ const TecPayment = ({ clientData, onPrev }) => {
       </h4>
 
       <div className="flex-grow space-y-6">
+  
+
         <div>
+          <p className="block text-gray-400 text-sm font-bold mb-2">Relatório Técnico</p>
+          <textarea
+            value={extraInfo}
+            onChange={(e) => setExtraInfo(e.target.value)}
+            className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm"
+            placeholder="Adicione um relatório detalhado do serviço realizado..."
+            rows={4}
+          />
+        </div>
+
+
+              <div>
           <label className="block text-gray-400 text-sm font-bold mb-2">Valor do Serviço (apenas números)</label>
           <input
             type="number"
@@ -86,36 +108,26 @@ const TecPayment = ({ clientData, onPrev }) => {
         </div>
 
         <div>
-          <p className="block text-gray-400 text-sm font-bold mb-2">Relatório Técnico</p>
-          <textarea
-            value={extraInfo}
-            onChange={(e) => setExtraInfo(e.target.value)}
-            className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm"
-            placeholder="Adicione um relatório detalhado do serviço realizado..."
-            rows={4}
-          />
-        </div>
+          <div className="flex-grow space-y-8">
 
+
+        {/* Bloco para fotos do DEPOIS */}
         <div>
-          <label htmlFor="proofPhotoInput" className="flex items-center space-x-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
-            <FiCamera size={20} />
-            <span>{proofPhoto ? 'Foto Selecionada!' : 'Enviar Foto do Comprovante'}</span>
-            <input
-              id="proofPhotoInput"
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-          </label>
-          {proofPhoto && (
-            <p className="mt-2 text-sm text-green-400">
-              <FiCheckCircle className="inline mr-2" />
-              {proofPhoto.name}
+          <label className="block text-gray-400 text-lg font-bold mb-2">Fotos do Comprovante</label>
+          <PhotoUploader 
+            clienteId={clientData.id} 
+            photoType="comprovante"
+            onUploadComplete={(urls) => handlePhotosUploaded(urls, 'comprovante')} 
+          />
+          {comprovantePhotos.length > 0 && (
+            <p className="text-gray-400 mt-2 text-center">
+              {comprovantePhotos.length} fotos salvas.
             </p>
           )}
         </div>
       </div>
+          
+        </div>
 
       <div className="mt-8 flex justify-between items-center">
         <button
@@ -146,6 +158,8 @@ const TecPayment = ({ clientData, onPrev }) => {
         </button>
       </div>
     </div>
+          </div>
+
   );
 };
 

@@ -86,15 +86,41 @@ function DashboardPage() {
         )}
             
         {/* Renderização condicional para usuários que SÃO técnicos */}
-        {currentUser?.tipo === 'tecnico' && (
-            <Link to="/agenda" className="block">
+{currentUser?.tipo === 'tecnico' && (
+    <>
+        <Link to="/agenda" className="block">
+            <div className="bg-gray-800 p-6 rounded-lg h-full border border-gray-700 hover:border-brand-blue hover:bg-gray-700/50 transition-all duration-300">
+                <AgendaIcon />
+                <h2 className="text-2xl font-semibold mb-2">Agenda</h2>
+                <p className="text-gray-400">Organize seus compromissos e visualize seus agendamentos.</p>
+            </div>
+        </Link>
+        {/* Alterado para grid-cols-2 para telas menores também */}
+        <div className="grid grid-cols-2 gap-6 mt-6 md:mt-0">
+            <Link to="/info" className="block">
                 <div className="bg-gray-800 p-6 rounded-lg h-full border border-gray-700 hover:border-brand-blue hover:bg-gray-700/50 transition-all duration-300">
-                    <AgendaIcon />
-                    <h2 className="text-2xl font-semibold mb-2">Agenda</h2>
-                    <p className="text-gray-400">Organize seus compromissos e visualize seus agendamentos.</p>
+                    {/* Ícone para o card de Gasolina */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <h2 className="text-2xl font-semibold mb-2">Gasolina</h2>
+                    <p className="text-gray-400">{currentUser?.km_sobrando ? `Km sobrando: ${currentUser.km_sobrando}` : 'Km sobrando: N/A'}</p>
                 </div>
             </Link>
-        )}
+            <Link to="/info" className="block">
+                <div className="bg-gray-800 p-6 rounded-lg h-full border border-gray-700 hover:border-brand-blue hover:bg-gray-700/50 transition-all duration-300">
+                    {/* Ícone para o card de Metas */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <h2 className="text-2xl font-semibold mb-2">Metas</h2>
+                    <p className="text-gray-400">{currentUser?.pontuacao ? `Pontuação: ${currentUser.pontuacao}` : 'Pontuação: N/A'}</p>
+                </div>
+            </Link>
+        </div>
+    </>
+)}
 
       </div>
     </div>

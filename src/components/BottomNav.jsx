@@ -69,7 +69,7 @@ function BottomNav() {
             </NavLink>
 
             {/* Novo link para Informações (só para técnico) */}
-            <NavLink to="/informacoes" className={getLinkClass}>
+            <NavLink to="/info" className={getLinkClass}>
               <FiInfo size={22} />
               <span className="text-xs">Informações</span>
             </NavLink>

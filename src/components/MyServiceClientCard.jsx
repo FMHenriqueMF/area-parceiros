@@ -130,14 +130,19 @@ function MyServiceClientCard({ cliente }) {
   }
 
   // >>>>>>>>>>>>>>>>> LÓGICA CORRIGIDA <<<<<<<<<<<<<<<<<<<<
-  let itensArray = [];
-  if (cliente.itens_cliente) {
+let itensArray = [];
+if (cliente.itens_cliente) {
     if (Array.isArray(cliente.itens_cliente)) {
         itensArray = cliente.itens_cliente.filter(item => item && item.trim() !== '');
     } else if (typeof cliente.itens_cliente === 'string') {
-        itensArray = cliente.itens_cliente.split(' ').map(item => item.trim()).filter(item => item !== '');
+        // Se for string, apenas adiciona ela ao array, sem fazer o split.
+        // A gente verifica se ela não está vazia pra manter o array limpo.
+        const trimmedString = cliente.itens_cliente.trim();
+        if (trimmedString !== '') {
+            itensArray.push(trimmedString);
+        }
     }
-  }
+}
   
   const borderColor = isToday ? 'border-status-orange' : 'border-gray-700';
   const osNumber = cliente.ultimos4 || 'N/A';

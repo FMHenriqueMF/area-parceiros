@@ -2,7 +2,7 @@
 
 import React from 'react';
 import TecServiceSummary from './carousel/TecServiceSummary';
-import TecPhotos from './carousel/PagePhotos';
+import TecPhotos from './carousel/TecPhotos';
 import TecPayment from './carousel/TecPayment';
 
 const TecnicoCarousel = ({ step, clientData, onNext, onPrev }) => {

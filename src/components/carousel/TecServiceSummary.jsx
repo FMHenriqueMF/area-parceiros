@@ -1,4 +1,6 @@
 import React from 'react';
+import { FiCheckCircle, FiEdit } from 'react-icons/fi';
+
 
 const TecServiceSummary = ({ clientData, onNext, onPrev }) => {
   let itens = [];
@@ -25,23 +27,39 @@ const TecServiceSummary = ({ clientData, onNext, onPrev }) => {
     );
   }
 
+    const handleConfirm = () => {
+    onNext();
+  };
+
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Resumo dos Serviços</h2>
-      <ul className="space-y-2 mb-6">
-        {itens.map((item, index) => (
+    <div className="flex flex-col space-y-8 p-6 bg-gray-900 rounded-xl shadow-lg">
+      <div className="flex flex-col items-center">
+        <h4 className="text-2xl font-bold flex items-center space-x-3 text-green-700">
+          <FiCheckCircle size={30} />
+          <span>Confirme os itens do serviço</span>
+        </h4>
+      </div>
+      
+      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+        <ul className="list-none space-y-2">
+          {itens.map((item, index) => (
           <li key={index} className="flex justify-between items-center bg-gray-100 p-3 rounded-md">
             <span className="text-gray-700">{item}</span>
           </li>
         ))}
-      </ul>
+        </ul>
+      </div>
+
+      <div className="flex justify-between items-center mt-6">
         
-        <button 
-          onClick={onNext} 
-          className="px-20 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition ease-in-out duration-150"
+        <button
+          onClick={handleConfirm}
+          className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full text-lg transition duration-300 shadow-md"
         >
-          Próximo
+          Confirmar
         </button>
+      </div>
     </div>
   );
 };

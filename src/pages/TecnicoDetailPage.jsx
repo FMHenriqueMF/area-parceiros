@@ -261,9 +261,8 @@ function TecnicoDetailPage() {
                         </div>
 
                         <div
-                            className={`bg-gray-800 p-8 rounded-lg shadow-xl transition-all duration-500 ease-in-out ${isDetailsExpanded ? 'md:col-span-1' : 'md:col-span-2'}`}
+    className={`bg-gray-800 p-3 rounded-lg shadow-xl transition-all duration-500 ease-in-out ${isDetailsExpanded ? 'md:col-span-1' : 'md:col-span-2'}`}
                         >
-                                <h3 className="text-2xl font-bold text-white mb-4">Ações no Local</h3>
                                 <p className="text-yellow-500 text-sm italic"> </p>
 
                             {isOwner && (cliente?.status === 'teccheguei') && (

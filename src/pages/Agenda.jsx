@@ -51,7 +51,7 @@ function Agenda() {
     const q = query(
       collection(db, "clientes"),
       where("Estado", "==", currentUser.estado),
-      where("status", "in", ["disponivel", "aceito", "deslocamento", "cheguei", "aguardandopagamento"])
+      where("status", "in", ["disponivel", "aceito", "tecdeslocamento", "teccheguei", "aguardandopagamento"])
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {

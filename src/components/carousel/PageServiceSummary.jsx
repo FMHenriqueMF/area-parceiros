@@ -13,6 +13,19 @@ const PageServiceSummary = ({ clientData, onNext, onPrev }) => {
     onPrev();
   };
 
+  // Lógica para determinar os itens a serem exibidos
+  let itensParaExibir = [];
+  if (Array.isArray(clientData.itens_cliente)) {
+    // Se for um array, usamos ele diretamente
+    itensParaExibir = clientData.itens_cliente;
+  } else if (typeof clientData.itens_cliente === 'string' && clientData.itens_cliente.length > 0) {
+    // Se for uma string, a colocamos como um único item na lista
+    itensParaExibir = [clientData.itens_cliente];
+    // Se a string puder ter múltiplos itens separados por vírgula, por exemplo,
+    // você poderia fazer:
+    // itensParaExibir = clientData.itens_cliente.split(',');
+  }
+
   return (
     <div className="flex flex-col space-y-8 p-6 bg-gray-900 rounded-xl shadow-lg">
       <div className="flex flex-col items-center">
@@ -24,8 +37,8 @@ const PageServiceSummary = ({ clientData, onNext, onPrev }) => {
       
       <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
         <ul className="list-none space-y-2">
-          {clientData.itens_cliente && clientData.itens_cliente.length > 0 ? (
-            clientData.itens_cliente.map((item, index) => (
+          {itensParaExibir.length > 0 ? (
+            itensParaExibir.map((item, index) => (
               <li key={index} className="text-gray-200 text-xl">
                 • {item.trim()}
               </li>

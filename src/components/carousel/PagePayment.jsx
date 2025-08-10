@@ -1,11 +1,10 @@
 // src/components/carousel/PagePayment.jsx
 
 import React, { useState } from 'react';
-import { FiDollarSign, FiArrowLeft, FiCamera, FiCheckCircle } from 'react-icons/fi';
+import { FiDollarSign, FiArrowLeft, FiCamera, FiCheckCircle, FiSend } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db, storage } from '../../firebase'; // Adicionado 'storage'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Adicionado para lidar com o upload da imagem
+import { db } from '../../firebase'; // Adicionado 'storage'
 import { logUserActivity } from '../../utils/logger';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../LoadingSpinner';

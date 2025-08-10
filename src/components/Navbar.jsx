@@ -4,7 +4,7 @@ import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '../context/AuthContext';
-import { FiGrid, FiClipboard, FiLogOut, FiUser, FiDollarSign } from 'react-icons/fi'; // Importar FiDollarSign
+import { FiGrid, FiClipboard, FiLogOut, FiUser, FiDollarSign, FiCalendar, FiInfo } from 'react-icons/fi'; // Importar FiDollarSign
 
 function Navbar() {
   const { currentUser, isAppLocked } = useAuth();
@@ -20,11 +20,13 @@ function Navbar() {
   };
 
   const getLinkClass = ({ isActive }) =>
+    
     isActive
       ? 'bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2'
       : 'text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2';
 
   const titleStyle = `text-xl font-bold ${isAppLocked ? 'text-status-orange' : 'text-brand-blue'}`;
+  const isTecnico = currentUser?.tipo === 'tecnico';
 
   return (
     <nav className="bg-gray-800 shadow-lg">
@@ -35,13 +37,34 @@ function Navbar() {
             <NavLink to="/" className={titleStyle}>
               {isAppLocked ? 'Serviço em Andamento' : 'Extrema Limpeza'}
             </NavLink>
+
+            {!isTecnico && (
+                <>
             <div className="hidden sm:flex sm:space-x-2">
               {isAppLocked ? <span className="text-gray-500 ..."><FiGrid /> Lista de Clientes</span> : <NavLink to="/lista" className={getLinkClass}><FiGrid /> Lista de Clientes</NavLink>}
               {isAppLocked ? <span className="text-gray-500 ..."><FiClipboard /> Meus Serviços</span> : <NavLink to="/meus-servicos" className={getLinkClass}><FiClipboard /> Meus Serviços</NavLink>}
-              
               {/* NOVO LINK PARA SALDOS */}
               {isAppLocked ? <span>...</span> : <NavLink to="/saldos" className={getLinkClass}><FiDollarSign /> Ganhos</NavLink>} {/* 2. Adicionar novo link */}
             </div>
+</>
+            )}
+                    {isTecnico && (
+                      <>
+                        {/* Novo link para Agenda (só para técnico) */}
+                        <NavLink to="/agenda" className={getLinkClass}>
+                          <FiCalendar size={22} />
+                          <span className="text-xs">Agenda</span>
+                        </NavLink>
+            
+                        {/* Novo link para Informações (só para técnico) */}
+                        <NavLink to="/info" className={getLinkClass}>
+                          <FiInfo size={22} />
+                          <span className="text-xs">Informações</span>
+                        </NavLink>
+                      </>
+                    )}
+
+
           </div>
 
           {/* Lado Direito */}

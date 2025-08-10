@@ -68,33 +68,47 @@ const PageConfirmItems = ({ clientData, onNext, onPrev }) => {
   const newValorParceiro = newTotalPrice * (clientData.parceiropercentual / 100);
 
 
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'orcamento'));
-        const allServices = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const groupedServices = allServices.reduce((acc, service) => {
-          acc[service.categoria] = acc[service.categoria] || [];
-          acc[service.categoria].push(service);
-          return acc;
-        }, {});
-        setServices(allServices);
-        setServicesByCategory(groupedServices);
-        
-        const initialItemsObject = clientData.itens_cliente.reduce((acc, itemName) => {
+useEffect(() => {
+  const fetchServices = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'orcamento'));
+      const allServices = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const groupedServices = allServices.reduce((acc, service) => {
+        acc[service.categoria] = acc[service.categoria] || [];
+        acc[service.categoria].push(service);
+        return acc;
+      }, {});
+      setServices(allServices);
+      setServicesByCategory(groupedServices);
+
+      // Verificação adicionada aqui
+      let initialItemsObject = {};
+      if (Array.isArray(clientData.itens_cliente)) {
+        initialItemsObject = clientData.itens_cliente.reduce((acc, itemName) => {
           const service = allServices.find(s => s.item === itemName);
           if (service) {
             acc[itemName] = { ...service, quantidade: (acc[itemName]?.quantidade || 0) + 1 };
           }
           return acc;
         }, {});
-        setSelectedItems(initialItemsObject);
-      } catch (error) {
-        console.error('Erro ao buscar serviços:', error);
+      } else if (typeof clientData.itens_cliente === 'string' && clientData.itens_cliente.length > 0) {
+        // Se for uma string, você pode querer adicionar como um único item,
+        // mas a lógica abaixo assume que é um array para ser reduzido.
+        // Se a string não for uma lista de itens, essa lógica precisa ser ajustada.
+        // Por exemplo, pode-se apenas adicionar a string como item único:
+        const service = allServices.find(s => s.item === clientData.itens_cliente);
+        if (service) {
+          initialItemsObject[service.item] = { ...service, quantidade: 1 };
+        }
       }
-    };
-    fetchServices();
-  }, [clientData.itens_cliente]);
+
+      setSelectedItems(initialItemsObject);
+    } catch (error) {
+      console.error('Erro ao buscar serviços:', error);
+    }
+  };
+  fetchServices();
+}, [clientData.itens_cliente]);
 
   const handleSelectItem = (service) => {
     setSelectedItems(prevItems => {
