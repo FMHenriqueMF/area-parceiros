@@ -13,6 +13,32 @@ const TecPhotos = ({ clientData, onNext, onPrev }) => {
 const { currentUser } = useAuth();
   const [beforePhotos, setBeforePhotos] = useState(clientData.fotos_antes || []);
   const [afterPhotos, setAfterPhotos] = useState(clientData.fotos_depois || []);
+    const [extraInfo, setExtraInfo] = useState(clientData.RelatotecnicoItens || '');
+      const [actionLoading, setActionLoading] = useState(false);
+    
+
+
+  const handleFinalizeService = async () => {
+      setActionLoading(true);
+  
+      try {
+
+        const clientRef = doc(db, 'clientes', clientData.id);
+        await updateDoc(clientRef, {
+          RelatotecnicoItens: extraInfo,
+        });
+  
+
+        logUserActivity(currentUser.uid, 'enviou_foto_e_relatorio', { clienteId: clientData.id });
+  
+      } catch (error) {
+        console.error("Erro ao finalizar o atendimento:", error);
+        toast.error(`Não foi possível finalizar o atendimento. Erro: ${error.message}`);
+      } finally {
+        setActionLoading(false);
+        onNext()
+      }
+    };
 
   const handlePhotosUploaded = async (imageUrls, photoType) => {
     if (!imageUrls || imageUrls.length === 0) return;
@@ -52,6 +78,16 @@ const { currentUser } = useAuth();
         <div className="flex justify-between mt-12"></div>
         </div>
       </div>
+              <div>
+          <p className="block text-gray-400 text-sm font-bold mb-2">Relatório Técnico</p>
+          <textarea
+            value={extraInfo}
+            onChange={(e) => setExtraInfo(e.target.value)}
+            className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm"
+            placeholder="Adicione um relatório detalhado do serviço realizado..."
+            rows={4}
+          />
+        </div>
       <div className="flex justify-between mt-12">
         <button
           onClick={onPrev}
@@ -61,7 +97,9 @@ const { currentUser } = useAuth();
           <span>Voltar</span>
         </button>
         <button
-          onClick={onNext}
+          
+                    onClick={handleFinalizeService}
+
           className="flex items-center space-x-2 bg-brand-blue text-white font-bold py-3 px-6 rounded-lg transition duration-300 hover:bg-blue-600"
         >
           <span>Próximo</span>

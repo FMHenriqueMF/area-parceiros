@@ -7,6 +7,7 @@ import { doc, onSnapshot, collection, query, where, updateDoc } from 'firebase/f
 import { recalculateAndSaveScore } from '../utils/scoreManager';
 import LegalModal from '../components/LegalModal';
 import OnboardingModal from '../components/OnboardingModal';
+import AppOutdatedModal from '../components/AppOutdatedModal'; // Importando o novo modal
 import { requestNotificationPermission } from '../utils/push-notifications';
 
 const AuthContext = React.createContext();
@@ -16,11 +17,13 @@ export function useAuth() {
 }
 
 const CURRENT_LEGAL_VERSION = 'v2.0';
+const CURRENT_APP_VERSION = 2; // << NOVO: A versão atual do seu app. Mude este número para forçar a atualização.
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true); // AGORA DEVE COMEÇAR COMO TRUE
+  const [loading, setLoading] = useState(true);
   const [isAppLocked, setIsAppLocked] = useState(false);
+  const [isAppOutdated, setIsAppOutdated] = useState(false); // << NOVO: Estado para a atualização forçada
   const [activeServiceId, setActiveServiceId] = useState(null);
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -34,6 +37,19 @@ export function AuthProvider({ children }) {
       if (permissionStatus === 'granted') {
         await requestNotificationPermission(currentUser.uid);
       }
+    }
+  };
+
+  const handleUpdateAppVersion = async () => {
+    if (!currentUser) return;
+    try {
+        const userRef = doc(db, 'usuarios', currentUser.uid);
+        await updateDoc(userRef, {
+            appVersion: CURRENT_APP_VERSION, // << NOVO: Atualiza a versão do app no Firestore
+        });
+        window.location.reload(); // << NOVO: Força o recarregamento
+    } catch (error) {
+        console.error("Erro ao atualizar a versão do app:", error);
     }
   };
 
@@ -58,6 +74,14 @@ export function AuthProvider({ children }) {
                 const data = docSnap.data();
                 const fullUserData = { uid: user.uid, email: user.email, ...data };
                 setCurrentUser(fullUserData);
+
+                // << NOVO: Lógica de checagem da versão do app
+                const needsAppUpdate = (data.appVersion || 1) < CURRENT_APP_VERSION;
+                if (needsAppUpdate) {
+                    setIsAppOutdated(true);
+                } else {
+                    setIsAppOutdated(false);
+                }
 
                 setHasNotificationPermission(Notification.permission);
                 
@@ -171,9 +195,11 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
+      {/* << NOVO: Renderiza a tela de atualização se necessário */}
+      {!loading && !showLegalModal && !showOnboardingModal && isAppOutdated && <AppOutdatedModal onUpdate={handleUpdateAppVersion} />}
       {!loading && showLegalModal && <LegalModal onAccept={handleAcceptLegal} />}
       {!loading && !showLegalModal && showOnboardingModal && <OnboardingModal onComplete={handleCompleteOnboarding} />}
-      {!loading && !showLegalModal && !showOnboardingModal && children}
+      {!loading && !showLegalModal && !showOnboardingModal && !isAppOutdated && children}
     </AuthContext.Provider>
   );
 }

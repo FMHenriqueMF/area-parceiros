@@ -50,6 +50,7 @@ function Navbar() {
             )}
                     {isTecnico && (
                       <>
+                      <div className="hidden sm:flex sm:space-x-2">
                         {/* Novo link para Agenda (só para técnico) */}
                         <NavLink to="/agenda" className={getLinkClass}>
                           <FiCalendar size={22} />
@@ -61,14 +62,16 @@ function Navbar() {
                           <FiInfo size={22} />
                           <span className="text-xs">Informações</span>
                         </NavLink>
+                          </div>
                       </>
                     )}
 
 
           </div>
 
-          {/* Lado Direito */}
-          <div className="hidden sm:flex sm:items-center sm:space-x-4">
+          {/* Lado Direito */} 
+          <div className="hidden sm:flex sm:items-center sm:space-x-4"> 
+            
             {/* MUDANÇA AQUI: O nome agora é um Link */}
             <Link to="/perfil" className="flex items-center gap-2 text-gray-400 hover:text-white transition text-sm">
               <FiUser />

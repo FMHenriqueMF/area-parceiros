@@ -13,7 +13,6 @@ import successAnimation from '../assets/success-animation.json';
 import paymentAnimation from '../assets/payment-animation.json';
 import { logUserActivity } from '../utils/logger.js';
 import { getPartnerPermissions } from '../utils/permissions.js';
-import { addReliabilityEvent } from '../utils/scoreManager.js';
 import { toast } from 'react-toastify';
 import TecnicoCarousel from '../components/TecnicoCarousel';
 import { MdOutlineCalendarToday, MdOutlineLocationOn, MdFormatListBulleted, MdInfoOutline, MdAttachMoney } from 'react-icons/md';
@@ -105,11 +104,7 @@ function TecnicoDetailPage() {
                 setNewTotalPrice(clientData.parceiropercentual);
 
                 if (clientData.status === 'finalizado') {
-                    if (!clientData.nota_atualizada) {
-                        await addReliabilityEvent(db, currentUser.uid, 10.0);
-                        const clientRef = doc(db, 'clientes', id);
-                        await updateDoc(clientRef, { nota_atualizada: true });
-                    }
+ 
                     setShowPaymentSuccessModal(true);
                     setChecklistStep(null);
                 } else if (clientData.status !== 'aguardandopagamento') {
@@ -219,7 +214,6 @@ function TecnicoDetailPage() {
                             <div className={`transition-all duration-200 ease-in-out overflow-hidden ${isDetailsExpanded ? 'max-h-[9999px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                 <div className="space-y-6">
                                     <h1 className="text-3xl font-bold text-brand-blue truncate">OS - {cliente.ultimos4}</h1>
-                                        <p className="text-lg text-white">{cliente?.quem_recebe}</p>
                                         <p className="text-lg text-white">{cliente?.quem_recebe}</p>
                                     <div className="flex items-start">
                                         <MdOutlineCalendarToday className="mr-4 text-3xl text-brand-blue flex-shrink-0" />

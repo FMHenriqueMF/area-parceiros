@@ -116,9 +116,10 @@ function ClientDetailPage() {
 
         if (clientData.status === 'finalizado') {
           if (!clientData.nota_atualizada) {
-            await addReliabilityEvent(db, currentUser.uid, 10.0);
             const clientRef = doc(db, 'clientes', id);
             await updateDoc(clientRef, { nota_atualizada: true });
+                        await addReliabilityEvent(db, currentUser.uid, 10.0);
+
           }
           setShowPaymentSuccessModal(true);
           setChecklistStep(null);
@@ -392,12 +393,12 @@ function ClientDetailPage() {
     if (hoursDifference <= 5) {
       setCancelMessage({
         title: "Atenção: Cancelamento Próximo ao Horário",
-        message: "O cancelamento de serviços com pouca antecedência pode afetar sua prioridade na plataforma para futuros agendamentos. Deseja continuar?",
+        message: "O cancelamento afetará sua nota e possivel banimento. Deseja continuar?",
       });
     } else {
       setCancelMessage({
         title: "Confirmar Cancelamento?",
-        message: "Você tem certeza que deseja cancelar este serviço? Ele voltará para a Lista de Clientes e ficará disponível para outros parceiros.",
+        message: "O cancelamento afetará sua nota e possivel banimento.",
       });
     }
     setIsCancelModalOpen(true);

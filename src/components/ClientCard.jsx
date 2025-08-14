@@ -73,19 +73,19 @@ function ClientCard({ cliente }) {
 
           <div className="flex justify-between items-start mb-2 pt-2">
             <div className="flex-1 min-w-0 pr-2">
-              <h2 className="text-lg font-bold text-brand-blue truncate">OS - {osNumber}</h2>
-              <p className="text-xs text-gray-400 break-words">Cidade: <span className="text-white">{cidade}</span></p>              
-              <p className="text-xs text-gray-400 break-words">Bairro: <span className="text-white">{bairro}</span> </p>
-              <p className="text-xs text-gray-400 break-words">Rua: <span className="text-white">{rua}</span></p>
+              <h2 className="text-2xl font-bold mb-2 text-brand-blue truncate">OS - {osNumber}</h2>
+              <p className="text-sm text-gray-400  break-words">Cidade: <span className="text-white">{cidade}</span></p>              
+              <p className="text-sm text-gray-400  break-words">Bairro: <span className="text-white">{bairro}</span> </p>
+              <p className="text-sm text-gray-400  break-words">Rua:        <span className="text-white"> {rua}</span></p>
             </div>
-            <div className="bg-go-green text-gray-900 font-bold py-1 px-3 rounded-md text-center flex-shrink-0">
+            <div className="bg-go-green text-gray-900 font-bold tracking-wider py-1 px-3 rounded-md text-center flex-shrink-0">
               {valorFormatado}
             </div>
           </div>
           
           <div className="my-2 border-t border-gray-700 pt-2"></div>
-          <div className="flex justify-between items-center mb-2">
-            <p className={`text-xs font-bold ${isToday ? 'text-orange-400' : 'text-white'}`}>
+          <div className="flex  items-center mb-5">
+            <p className={`text-lg tracking-wider font-bold ${isToday ? 'text-orange-400' : 'text-white'}`}>
               {isToday ? '🔥 É HOJE!' : `Data: ${data}`} - {horarioOuTurno}
             </p>
           </div>

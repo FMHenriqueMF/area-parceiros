@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-// Importe aqui as funções para buscar dados do histórico de combustível e das metas
-// Ex: import { getHistoricoCombustivel, getMetas } from '../services/api';
+// Importamos as funções do Firestore para buscar os dados
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
+
 
 function InfoPage() {
     const { currentUser } = useAuth();
@@ -20,25 +22,36 @@ function InfoPage() {
             if (!currentUser) return;
             try {
                 setIsLoading(true);
-                // ESTA PARTE PRECISA SER SUBSTITUÍDA PELAS SUAS CHAMADAS DE API REAIS
-                // const historicoCombustivelData = await getHistoricoCombustivel(currentUser.uid);
-                // const metasData = await getMetas(currentUser.uid);
-                
-                // Exemplo de dados mockados para simular a resposta da API
+
+                // NOVO: Buscando os dados de pontuação do documento do usuário
+                const userDocRef = doc(db, "usuarios", currentUser.uid); // Coleção de usuários
+                const userDocSnap = await getDoc(userDocRef);
+
+                let pontuacaoSemanaAtual = 0;
+                let pontuacaoSemanaPassada = 0;
+
+                // Verificamos se o documento do usuário existe e pegamos a pontuação
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    pontuacaoSemanaAtual = userData.pontuacaoSemanaAtual || 0;
+                    pontuacaoSemanaPassada = userData.pontuacaoSemanaPassada || 0;
+                }
+
+                // Exemplo de dados mockados para simular a resposta da API (agora com a pontuação real)
                 const historicoCombustivelData = [
                     { data: '2025-07-25', rotaDetalhes: 'Casa -> Atendimento 1 -> Atendimento 2 -> Casa', kmRodados: 55 },
                     { data: '2025-07-24', rotaDetalhes: 'Casa -> Atendimento 1 -> Casa', kmRodados: 32 },
                 ];
 
-                const metasData = {
-                    semanaAtual: { pontuacao: currentUser.pontuacao || 0, recompensa: null, metaAlcancada: false },
-                    semanaPassada: { pontuacao: 4700, recompensa: 450, metaAlcancada: true },
-                };
-
                 setHistoricoCombustivel(historicoCombustivelData);
-                setMetas(metasData);
+                // ATUALIZADO: Usando os dados do Firestore para preencher o estado de metas
+                setMetas({
+                    semanaAtual: { pontuacao: pontuacaoSemanaAtual, recompensa: null, metaAlcancada: false },
+                    semanaPassada: { pontuacao: pontuacaoSemanaPassada, recompensa: null, metaAlcancada: false },
+                });
 
             } catch (err) {
+                console.error("Erro ao buscar os dados do usuário:", err);
                 setError('Ocorreu um erro ao carregar os dados. Tente novamente mais tarde.');
             } finally {
                 setIsLoading(false);

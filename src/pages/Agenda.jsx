@@ -35,7 +35,7 @@ function Agenda() {
 
   const today = new Date();
 
-  useEffect(() => {
+useEffect(() => {
     if (authLoading || !currentUser) {
       setLoading(false);
       setServicosDisponiveis([]);
@@ -46,11 +46,12 @@ function Agenda() {
       hasLoggedView.current = true;
     }
 
-    // AQUI: A query agora busca por serviços que correspondem ao estado do usuário
-    // e que estejam em uma lista de status específicos.
+    const formattedSelectedDate = formatDate(selectedDate); // Pega a data formatada
+
     const q = query(
       collection(db, "clientes"),
       where("Estado", "==", currentUser.estado),
+      where("data", "==", formattedSelectedDate), // <-- FILTRO ADICIONADO AQUI!
       where("status", "in", ["disponivel", "aceito", "tecdeslocamento", "teccheguei", "aguardandopagamento"])
     );
 
@@ -60,7 +61,7 @@ function Agenda() {
         servicosDoEstado.push({ id: doc.id, ...doc.data() });
       });
 
-      setServicosDisponiveis(servicosDoEstado);
+      setServicosDisponiveis(servicosDoEstado); // Agora já vem com os serviços só do dia certo
       setLoading(false);
     }, (error) => {
       console.error("Erro ao buscar serviços:", error);
@@ -68,7 +69,30 @@ function Agenda() {
     });
 
     return () => unsubscribe();
-  }, [currentUser, authLoading]);
+  }, [currentUser, authLoading, selectedDate]); // <-- ADICIONADO selectedDate ÀS DEPENDÊNCIAS
+
+  // useEffect de ORDENAÇÃO (não precisa mais filtrar)
+  useEffect(() => {
+    const servicosOrdenados = [...servicosDisponiveis] // <-- Apenas ordena
+      .sort((a, b) => {
+        const periodA = getPeriodPriority(a.periodo_preferencia);
+        const periodB = getPeriodPriority(b.periodo_preferencia);
+        
+        if (periodA !== periodB) {
+          return periodA - periodB;
+        }
+
+        const timeA = a.horario ? a.horario.split(':').map(Number) : [99, 99];
+        const timeB = b.horario ? b.horario.split(':').map(Number) : [99, 99];
+        
+        if (timeA[0] !== timeB[0]) {
+          return timeA[0] - timeB[0];
+        }
+        return timeA[1] - timeB[1];
+      });
+
+    setFilteredServicos(servicosOrdenados);
+  }, [servicosDisponiveis]);
 
   // useEffect para filtrar e ordenar os serviços sempre que a data ou a lista de serviços mudar
   useEffect(() => {

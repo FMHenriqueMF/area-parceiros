@@ -30,7 +30,7 @@ const PagePayment = ({ clientData, onPrev }) => {
         telefone: phone,
         codigo_cliente: `${clientData.id}-${clientData?.aceito_por_uid}`,
         id_parceiro: clientData?.aceito_por_uid,
-        valor: clientData?.parceiropercentual,
+        valor: clientData?.valor_totalNUM,
       };
 
       const response = await fetch(MAKE_WEBHOOK_URL, {

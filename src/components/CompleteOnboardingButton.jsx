@@ -9,9 +9,9 @@ import { logUserActivity } from '../utils/logger';
 const CompleteOnboardingButton = () => {
   const { currentUser } = useAuth();
   
-  const handleUpdateOnboarding = async () => {
+  const handleUpdateUsers = async () => {
     // Confirmação para evitar rodar acidentalmente
-    const confirmar = window.confirm("Tem certeza que deseja marcar 'onboardingCompleted' como TRUE para TODOS os usuários?");
+    const confirmar = window.confirm("Tem certeza que deseja atualizar o campo 'historico_qualidade' para todos os usuários?");
     if (!confirmar) {
       return;
     }
@@ -29,17 +29,31 @@ const CompleteOnboardingButton = () => {
       // Percorre cada documento e adiciona a atualização ao batch
       querySnapshot.forEach((documento) => {
         const docRef = doc(db, 'usuarios', documento.id);
-        batch.update(docRef, {
-          onboardingCompleted: true
-        });
+        
+        // Pega os dados atuais do documento
+        const dadosUsuario = documento.data();
+        
+        // Verifica se o array 'historico_qualidade' existe e tem pelo menos um item
+        if (dadosUsuario.historico_qualidade && Array.isArray(dadosUsuario.historico_qualidade) && dadosUsuario.historico_qualidade.length > 0) {
+          // Cria uma cópia do array para não alterar o original diretamente
+          const novoHistorico = [...dadosUsuario.historico_qualidade];
+          
+          // Atualiza o valor do índice 0 para 10
+          novoHistorico[0] = 10;
+          
+          // Adiciona a atualização ao batch
+          batch.update(docRef, {
+            historico_qualidade: novoHistorico
+          });
+        }
       });
 
       // Commit o batch para salvar todas as atualizações de uma vez
       await batch.commit();
 
-      alert("Campo 'onboardingCompleted' atualizado para TRUE com sucesso para todos os usuários!");
+      alert("Campo 'historico_qualidade' atualizado para todos os usuários!");
       if (currentUser) {
-        logUserActivity(currentUser.uid, 'Marcou onboardingCompleted como TRUE para todos os usuários');
+        logUserActivity(currentUser.uid, "Atualizou 'historico_qualidade' para todos os usuários");
       }
     } catch (error) {
       console.error("Erro ao atualizar os usuários:", error);
@@ -50,10 +64,10 @@ const CompleteOnboardingButton = () => {
   return (
     <div className="md:col-span-2 mt-8">
       <button
-        onClick={handleUpdateOnboarding}
+        onClick={handleUpdateUsers}
         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition duration-300"
       >
-        Marcar Onboarding como Concluído (para todos os usuários)
+        Atualizar Histórico de Qualidade (para todos os usuários)
       </button>
     </div>
   );
