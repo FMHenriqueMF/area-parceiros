@@ -5,21 +5,21 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import LoadingSpinner from '../components/LoadingSpinner'; // 1. Importar o spinner
-import { logUserActivity } from '../utils/logger.js'; // Importar
+import LoadingSpinner from '../components/LoadingSpinner';
+import { logUserActivity } from '../utils/logger.js';
 
 
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false); // 2. Estado para controlar o carregamento
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (evento) => {
     evento.preventDefault();
     setError('');
-    setLoading(true); // 3. Ativar o carregamento
+    setLoading(true);
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -29,9 +29,8 @@ function LoginPage() {
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        if (userData.tipo === 'parceiro' || userData.ADM === 'SIM') {
+        if (userData.tipo === 'parceiro' || userData.ADM === 'SIM' || userData.tipo === 'tecnico') {
           await logUserActivity(user.uid, 'Realizou Login');
-
           navigate('/');
         } else {
           await auth.signOut();
@@ -44,10 +43,10 @@ function LoginPage() {
     } catch (err) {
       setError('Email ou senha inválidos.');
     } finally {
-      setLoading(false); // 4. Desativar o carregamento, independente do resultado
+      setLoading(false);
     }
   };
-  // --- NOVA FUNÇÃO PARA "ESQUECI A SENHA" ---
+
   const handleForgotPassword = async () => {
     const userEmail = prompt("Por favor, digite o seu e-mail para enviarmos o link de redefinição de senha:");
     if (userEmail) {
@@ -61,13 +60,10 @@ function LoginPage() {
     }
   };
 
-
   return (
-    // 5. Novo fundo com gradiente
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-slate-800 text-white p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          {/* 6. Espaço para o Logo */}
           <h1 className="text-4xl font-bold tracking-wider text-brand-blue">EXTREMA LIMPEZA</h1>
           <p className="text-gray-400 mt-2">Higienização de Estofados</p>
         </div>
@@ -126,6 +122,12 @@ function LoginPage() {
             </button>
           </div>
         </div>
+      </div>
+      {/* NOVO RODAPÉ */}
+      <div className="text-center text-gray-500 text-xs mt-6">
+        <p>CNPJ: 54.903.333/0001-50</p>
+        <p>Telefone: 48 9 8445 9610</p>
+        <p>Endereço: Rua Antonio Divan, 299, Partenon, Porto Alegre, Brasil.</p>
       </div>
     </div>
   );

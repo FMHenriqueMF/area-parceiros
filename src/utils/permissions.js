@@ -10,13 +10,13 @@ export function getPartnerPermissions(score) {
         return { level: 'Top Parceiro/Elite', dailyLimit: Infinity, turnLimit: Infinity, canAccept: true };
     }
     if (score >= 6.0) {
-        return { level: 'Acesso Preferencial', dailyLimit: 6, turnLimit: 1, canAccept: true };
+        return { level: 'Acesso Preferencial', dailyLimit: 6, turnLimit: Infinity, canAccept: true };
     }
     if (score >= 4.0) {
-        return { level: 'Acesso Normal', dailyLimit: 4, turnLimit: 1, canAccept: true };
+        return { level: 'Acesso Normal', dailyLimit: 4, turnLimit: Infinity, canAccept: true };
     }
     if (score >= 3.1) {
-        return { level: 'Acesso Limitado', dailyLimit: 1, turnLimit: 1, canAccept: true };
+        return { level: 'Acesso Limitado', dailyLimit: 1, turnLimit: Infinity, canAccept: true };
     }
     // Nível de Banimento
     return { level: 'Banido', dailyLimit: 0, turnLimit: 0, canAccept: false };

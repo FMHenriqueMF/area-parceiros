@@ -80,7 +80,7 @@ function PartnerScore({ partnerData }) { // Agora recebe 'partnerData' direto
         if (score >= 6.0) return { label: 'Acesso Preferencial', color: 'bg-green-500' };
         if (score >= 4.0) return { label: 'Acesso Normal', color: 'bg-yellow-500' };
         if (score >= 3.1) return { label: 'Acesso Limitado', color: 'bg-orange-500' };
-        return { label: 'BANIDO', color: 'bg-red-600' };
+        return { label: 'SUSPENSO', color: 'bg-red-600' };
     }, [partnerData]);
 
     if (!partnerData) return null;

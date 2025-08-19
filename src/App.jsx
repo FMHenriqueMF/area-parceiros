@@ -19,6 +19,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Agenda from './pages/Agenda.jsx';
 import TecnicoDetailPage from './pages/TecnicoDetailPage.jsx';
+import MapaClientesPage from './pages/MapaClientesPage.jsx'; // 1. Importe a nova página
+
 import InfoPage from './pages/InfoPage.jsx';
 
 function App() {
@@ -105,6 +107,8 @@ function App() {
         <Route path="cliente/:id" element={<ClientDetailPage />} />
         <Route path='info' element={<InfoPage/>}/>
         <Route path="servico/:id" element={<TecnicoDetailPage />} />
+                <Route path="mapa" element={<MapaClientesPage />} />
+
         <Route path="meus-servicos" element={<MeusServicosPage />} />
         <Route path="saldos" element={<PainelGanhos />} />
         <Route path="perfil" element={<PerfilPage />} />

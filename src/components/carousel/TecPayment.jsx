@@ -48,22 +48,48 @@ const TecPayment = ({ clientData, onPrev }) => {
   }, [payments]);
 
   // Efeito para ouvir mudanças no cliente em tempo real (ex: autorizações da base)
-  useEffect(() => {
+const [verificationTimeouts, setVerificationTimeouts] = useState({});
+
+// useEffect para verificação em tempo real - VERIFICAÇÃO EXATA
+useEffect(() => {
     if (!clientData.id) return;
 
     const clientRef = doc(db, 'clientes', clientData.id);
     const unsubscribe = onSnapshot(clientRef, (doc) => {
       if (doc.exists()) {
         const updatedClientData = doc.data();
+        console.log('🔄 Dados atualizados do Firebase:', updatedClientData); // Debug
         
-        // Lógica para verificar pagamentos que estavam pendentes
         setPayments(prevPayments => {
-            return prevPayments.map(payment => {
+            return prevPayments.map((payment, index) => {
                 if (payment.isVerificationLoading) {
                     const valorPagoFirebase = Number(updatedClientData.valorpago);
                     const valorDigitado = Number(payment.value);
+                    
+                    console.log(`🔍 Verificando pagamento ${index + 1}:`, {
+                        valorPagoFirebase,
+                        valorDigitado,
+                        saoIguais: valorPagoFirebase === valorDigitado,
+                        paymentId: payment.verificationId,
+                        clienteId: clientData.id
+                    });
 
+                    // ✅ VERIFICAÇÃO EXATA - valores devem ser IDÊNTICOS
                     if (valorPagoFirebase && valorPagoFirebase === valorDigitado) {
+                        console.log(`✅ Pagamento ${index + 1} VERIFICADO!`);
+                        
+                        // Limpa o timeout se existir
+                        if (verificationTimeouts[index]) {
+                            clearTimeout(verificationTimeouts[index]);
+                            setVerificationTimeouts(prev => {
+                                const newTimeouts = { ...prev };
+                                delete newTimeouts[index];
+                                return newTimeouts;
+                            });
+                        }
+
+                        toast.success(`Pagamento #${index + 1} verificado com sucesso!`);
+                        
                         return {
                             ...payment,
                             isVerified: true,
@@ -72,16 +98,141 @@ const TecPayment = ({ clientData, onPrev }) => {
                             errorMessage: '',
                         };
                     }
+
+                    // ✅ Verifica se o Make retornou algum erro específico
+                    if (updatedClientData.verification_error) {
+                        console.log(`❌ Erro na verificação:`, updatedClientData.verification_error);
+                        
+                        // Limpa o timeout
+                        if (verificationTimeouts[index]) {
+                            clearTimeout(verificationTimeouts[index]);
+                            setVerificationTimeouts(prev => {
+                                const newTimeouts = { ...prev };
+                                delete newTimeouts[index];
+                                return newTimeouts;
+                            });
+                        }
+
+                        return {
+                            ...payment,
+                            isVerificationLoading: false,
+                            errorMessage: `Erro na verificação: ${updatedClientData.verification_error}`,
+                        };
+                    }
                 }
                 return payment;
             });
         });
+      } else {
+        console.log('❌ Documento do cliente não encontrado!');
       }
+    }, (error) => {
+        console.error('❌ Erro no listener do Firebase:', error);
     });
 
-    // Limpa o listener quando o componente é desmontado
-    return () => unsubscribe();
-  }, [clientData.id]);
+    return () => {
+        unsubscribe();
+        // Limpa todos os timeouts ao desmontar
+        Object.values(verificationTimeouts).forEach(timeout => clearTimeout(timeout));
+    };
+}, [clientData.id, verificationTimeouts]); // ✅ Adicionei verificationTimeouts nas dependências
+
+// Função de verificação melhorada
+const handleVerifyPayment = async (index) => {
+    const newPayments = [...payments];
+    const paymentToVerify = newPayments[index];
+
+    // Validações iniciais
+    if (!paymentToVerify.verificationId || !paymentToVerify.value) {
+        paymentToVerify.errorMessage = "Preencha o valor e o ID para verificar.";
+        setPayments([...newPayments]);
+        return;
+    }
+
+    // Verifica se já existe uma verificação em andamento
+    if (paymentToVerify.isVerificationLoading) {
+        console.log('⏳ Verificação já está em andamento...');
+        return;
+    }
+    
+    console.log(`🚀 Iniciando verificação do pagamento ${index + 1}...`);
+    
+    paymentToVerify.isVerificationLoading = true;
+    paymentToVerify.errorMessage = '';
+    setPayments([...newPayments]);
+
+    try {
+        const payload = {
+            payment_id: paymentToVerify.verificationId.trim(), // Remove espaços extras
+            external_reference: clientData.id,
+            valor_esperado: Number(paymentToVerify.value),
+            timestamp: new Date().toISOString()
+        };
+
+        console.log('📤 Enviando para Make:', payload);
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload),
+        });
+        
+        console.log('📥 Resposta do Make:', response.status, response.statusText);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Erro HTTP:', errorText);
+            throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+        }
+
+        toast.info("Verificação enviada ao Make. Aguardando confirmação...");
+
+        // ✅ Timeout com cleanup melhorado
+        const timeoutId = setTimeout(() => {
+            console.log(`⏰ Timeout atingido para pagamento ${index + 1}`);
+            
+            setPayments(currentPayments => {
+                const p = currentPayments[index];
+                if (p && p.isVerificationLoading) {
+                    const updatedPayments = [...currentPayments];
+                    updatedPayments[index] = {
+                        ...p,
+                        isVerificationLoading: false,
+                        errorMessage: "A verificação está demorando. Verifique se o ID está correto ou tente novamente."
+                    };
+                    return updatedPayments;
+                }
+                return currentPayments;
+            });
+            
+            // Remove o timeout da lista
+            setVerificationTimeouts(prev => {
+                const newTimeouts = { ...prev };
+                delete newTimeouts[index];
+                return newTimeouts;
+            });
+        }, 25000); // 25 segundos
+
+        // Armazena o timeout
+        setVerificationTimeouts(prev => ({
+            ...prev,
+            [index]: timeoutId
+        }));
+
+    } catch (error) {
+        console.error("❌ Erro ao verificar pagamento:", error);
+        
+        const updatedPayments = [...payments];
+        updatedPayments[index].isVerificationLoading = false;
+        updatedPayments[index].errorMessage = `Erro: ${error.message}`;
+        setPayments(updatedPayments);
+        
+        toast.error("Erro ao enviar verificação para o Make.");
+    }
+};
 
 
   const handleAddPayment = () => {
@@ -97,7 +248,7 @@ const TecPayment = ({ clientData, onPrev }) => {
     newPayments[index].errorMessage = '';
     setPayments(newPayments);
   };
-  
+  {/*
   const handleVerifyPayment = async (index) => {
     const newPayments = [...payments];
     const paymentToVerify = newPayments[index];
@@ -147,7 +298,7 @@ const TecPayment = ({ clientData, onPrev }) => {
         updatedPayments[index].errorMessage = `Erro ao iniciar a verificação. Tente novamente.`;
         setPayments(updatedPayments);
     }
-  };
+  };*/}
 
   const handleFinalizeService = async () => {
     setActionLoading(true);
@@ -196,7 +347,9 @@ const TecPayment = ({ clientData, onPrev }) => {
         const dataToUpdate = {
             ponto: pontoDoServico,
             forma_pagamento: payments.map(p => p.method).join(', '),
-            status: 'finalizado'
+            status: 'finalizado',
+            status_pagamento: 'approved'
+
         };
 
         // ATUALIZAÇÃO CONDICIONAL: Só atualiza o valor se não houver pagamento em dinheiro ou longe

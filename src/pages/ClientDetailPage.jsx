@@ -176,7 +176,7 @@ function ClientDetailPage() {
               const jobsInSameTurn = turnSnapshot.size;
 
               if (jobsInSameTurn >= permissions.turnLimit) {
-                setCanAcceptJob({ can: false, reason: `Você já atingiu seu limite de ${permissions.turnLimit} serviço(s) para o turno da ${clientData.turno} do dia ${clientData.data}. Aumente sua nota para aumentar seu limite, mais informações na sua página de Perfil.` });
+                setCanAcceptJob({ can: true, reason: '' });
               } else {
                 setCanAcceptJob({ can: true, reason: '' });
               }

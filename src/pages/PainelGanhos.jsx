@@ -15,9 +15,92 @@ import {
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
-import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { EmailAuthProvider, reauthenticateWithCredential, GoogleAuthProvider, reauthenticateWithPopup } from "firebase/auth";
 import { logUserActivity } from '../utils/logger.js';
-import LoadingSpinner from '../components/LoadingSpinner';
+
+
+ const s = {
+    modalOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+    },
+    modalContent: {
+      backgroundColor: 'white',
+      padding: '2rem',
+      borderRadius: '16px',
+      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+      width: '90%',
+      maxWidth: '450px',
+      position: 'relative',
+    },
+    modalCloseButton: {
+      position: 'absolute',
+      top: '10px',
+      right: '10px',
+      background: '#f0f0f0',
+      border: 'none',
+      borderRadius: '50%',
+      width: '30px',
+      height: '30px',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 'bold',
+    },
+    modalTitle: {
+      textAlign: 'center',
+      fontSize: '1.5rem',
+      fontWeight: 'bold',
+      color: '#333',
+      marginBottom: '1.5rem',
+    },
+    modalText: {
+      textAlign: 'center',
+      color: '#555',
+      marginBottom: '1.5rem',
+      lineHeight: '1.6',
+    },
+    inputGroup: {
+      position: 'relative',
+      marginBottom: '1rem',
+    },
+    input: {
+      width: '100%',
+      padding: '12px 12px 12px 40px',
+      border: '1px solid #ddd',
+      borderRadius: '8px',
+      fontSize: '1rem',
+    },
+    ctaButton: {
+      width: '100%',
+      padding: '14px',
+      border: 'none',
+      borderRadius: '8px',
+      backgroundColor: '#007bff',
+      color: 'white',
+      fontWeight: 'bold',
+      fontSize: '1rem',
+      cursor: 'pointer',
+      transition: 'background-color 0.3s',
+    },
+    feedback: {
+      padding: '10px',
+      borderRadius: '8px',
+      textAlign: 'center',
+      fontSize: '0.9rem',
+    }
+  };
+
+
 
 // --- Ícones para a UI ---
 const IconWallet = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>;
@@ -32,13 +115,14 @@ export default function PainelGanhos() {
   const [parceiroInfo, setParceiroInfo] = useState(null);
   const [atendimentos, setAtendimentos] = useState([]);
 
-
   // --- Estados de UI ---
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
   const [view, setView] = useState("dashboard");
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
+  const [authProvider, setAuthProvider] = useState(''); // <--- ADICIONE ESTA LINHA
+
 
   // --- Estados de Filtros e Formulários ---
   const [historyPeriod, setHistoryPeriod] = useState({ inicio: "", fim: "" });
@@ -47,13 +131,6 @@ export default function PainelGanhos() {
   const [senhaConfirmacao, setSenhaConfirmacao] = useState("");
   const [processing, setProcessing] = useState(false);
   const hasLoggedView = useRef(false);
-
-  // --- Efeitos ---
-  //useEffect(() => {
-  //  const handleResize = () => setIsMobile(window.innerWidth <= 600);
-  //  window.addEventListener('resize', handleResize);
-  //  return () => window.removeEventListener('resize', handleResize);
-  //}, []);
 
   useEffect(() => {
     if (!parceiroUID) { setLoading(false); return; }
@@ -87,7 +164,7 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
 
       const [d, m, y] = a.data.split('/');
       const dataAtendimento = new Date(y, m - 1, d);
-      const dataLiberacao = new Date(dataAtendimento.getTime() + 48 * 60 * 60 * 1000);
+      const dataLiberacao = new Date(dataAtendimento.getTime() + 72 * 60 * 60 * 1000); // 72 horas em milissegundos
 
       return agora >= dataLiberacao;
     });
@@ -124,6 +201,10 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
 
   // --- Funções de Ação ---
   const handlePixModalOpen = () => {
+    const user = auth.currentUser;
+    if (user && user.providerData.length > 0) {
+      setAuthProvider(user.providerData[0].providerId);
+    }
     setPixUpdateStep('confirm_password');
     setSenhaConfirmacao('');
     setNovaChavePix('');
@@ -131,7 +212,7 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
     setShowPixModal(true);
   };
 
-  const handleReauthenticate = async (e) => {
+  const handlePasswordReauthenticate = async (e) => {
     e.preventDefault();
     if (!senhaConfirmacao) return;
     setProcessing(true);
@@ -143,6 +224,27 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
       setFeedback({ type: "success", message: "Senha confirmada! Agora digite sua nova chave." });
     } catch (error) { setFeedback({ type: "error", message: "Senha incorreta. Tente novamente." }); }
     finally { setProcessing(false); setSenhaConfirmacao(''); }
+  };
+
+  // ALTERAÇÃO: Nova função para lidar com a reautenticação de usuários do Google.
+  const handleGoogleReauthenticate = async () => {
+    setProcessing(true);
+    try {
+      const user = auth.currentUser;
+      const provider = new GoogleAuthProvider();
+      await reauthenticateWithPopup(user, provider);
+      setPixUpdateStep('enter_new_key');
+      setFeedback({ type: "success", message: "Identidade confirmada! Agora digite sua nova chave." });
+    } catch (error) {
+      console.error("Erro na reautenticação com Google:", error);
+      let errorMessage = "Não foi possível confirmar sua identidade. Tente novamente.";
+      if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "A janela de confirmação foi fechada. Tente novamente.";
+      }
+      setFeedback({ type: "error", message: errorMessage });
+    } finally {
+      setProcessing(false);
+    }
   };
 
    const handleUpdateChavePix = async (e) => {
@@ -220,34 +322,49 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
     return <span className={`${className} px-2 py-1 rounded-full text-xs font-bold`}>{text}</span>;
   }
 
-   const renderPixUpdateModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-40 z-[1000] flex items-center justify-center backdrop-blur-sm p-4" onClick={() => setShowPixModal(false)}>
-      <div className="bg-white rounded-2xl p-5 md:p-8 w-11/12 max-w-lg shadow-2xl relative animate-fade-in" onClick={e => e.stopPropagation()}>
-        <button className="absolute top-3 right-3 bg-gray-100 rounded-full w-8 h-8 text-sm font-bold flex items-center justify-center hover:bg-gray-200" onClick={() => setShowPixModal(false)}>X</button>
-        <h2 className="text-xl font-bold text-gray-800 text-center mb-5">Alterar Chave PIX</h2>
+  const renderPixUpdateModal = () => (
+    <div style={s.modalOverlay} onClick={() => setShowPixModal(false)}>
+      <div style={s.modalContent} onClick={e => e.stopPropagation()}>
+        <button style={s.modalCloseButton} onClick={() => setShowPixModal(false)}>X</button>
+        <h2 style={s.modalTitle}>Alterar Chave PIX</h2>
+        
         {pixUpdateStep === 'confirm_password' ? (
-          <form onSubmit={handleReauthenticate}>
-            <p className="text-center text-gray-600 mb-4">Para sua segurança, digite sua senha de acesso para continuar.</p>
-            <div className="relative flex items-center mb-4"><IconLock className="absolute left-3" /><input type="password" placeholder="Sua senha" className="w-full pl-10 p-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" value={senhaConfirmacao} onChange={e => setSenhaConfirmacao(e.target.value)} autoFocus /></div>
-            <button type="submit" disabled={processing} className="w-full bg-blue-600 text-white p-4 font-bold rounded-xl transition duration-300 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
-              {processing ? 'Verificando...' : 'Confirmar Senha'}
-            </button>
-          </form>
+          <>
+            {authProvider === 'password' && (
+              <form onSubmit={handlePasswordReauthenticate}>
+                <p style={s.modalText}>Para sua segurança, digite sua senha de acesso para continuar.</p>
+                <div style={s.inputGroup}><IconLock /><input type="password" placeholder="Sua senha" style={s.input} value={senhaConfirmacao} onChange={e => setSenhaConfirmacao(e.target.value)} autoFocus/></div>
+                <button type="submit" disabled={processing} style={s.ctaButton}>{processing ? 'Verificando...' : 'Confirmar Senha'}</button>
+              </form>
+            )}
+            
+            {authProvider === 'google.com' && (
+              <div style={{textAlign: 'center'}}>
+                <p style={s.modalText}>Para sua segurança, confirme sua identidade através do Google.</p>
+                <button onClick={handleGoogleReauthenticate} disabled={processing} style={{...s.ctaButton, background: '#4285F4'}}>
+                  {processing ? 'Aguardando...' : 'Confirmar com Google'}
+                </button>
+              </div>
+            )}
+            
+            {authProvider && !['password', 'google.com'].includes(authProvider) && (
+              <p style={s.modalText}>
+                Não é possível alterar a chave PIX automaticamente para este tipo de conta. Por favor, entre em contato com o suporte.
+              </p>
+            )}
+          </>
         ) : (
           <form onSubmit={handleUpdateChavePix}>
-            <p className="text-center text-gray-600 mb-4">Ótimo! Agora digite sua nova chave PIX.</p>
-            <div className="relative flex items-center mb-4"><IconKey className="absolute left-3" /><input type="text" placeholder="Nova Chave PIX" className="w-full pl-10 p-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" value={novaChavePix} onChange={e => setNovaChavePix(e.target.value)} autoFocus /></div>
-            <button type="submit" disabled={processing} className="w-full bg-blue-600 text-white p-4 font-bold rounded-xl transition duration-300 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
-              {processing ? 'Salvando...' : 'Salvar Nova Chave'}
-            </button>
+            <p style={s.modalText}>Ótimo! Agora digite sua nova chave PIX.</p>
+            <div style={s.inputGroup}><IconKey /><input type="text" placeholder="Nova Chave PIX" style={s.input} value={novaChavePix} onChange={e => setNovaChavePix(e.target.value)} autoFocus/></div>
+            <button type="submit" disabled={processing} style={s.ctaButton}>{processing ? 'Salvando...' : 'Salvar Nova Chave'}</button>
           </form>
         )}
-        {feedback.message && <div className={`p-3 rounded-lg text-sm font-semibold mt-4 text-center ${feedback.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{feedback.message}</div>}
+
+        {feedback.message && <div style={{...s.feedback, backgroundColor: feedback.type === 'success' ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)', color: feedback.type === 'success' ? '#155724' : '#721c24', marginTop: 15}}>{feedback.message}</div>}
       </div>
     </div>
   );
-
-
 
    const renderHistoryModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-40 z-[1000] flex items-center justify-center backdrop-blur-sm p-4" onClick={() => setShowHistoryModal(false)}>
@@ -369,7 +486,6 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
     </>
   );
 
-
   // --- Renderização Principal ---
   if (loading) return <div className="text-center p-10 text-gray-600">Carregando...</div>;
   if (!parceiroInfo) return <div className="text-center p-10 text-gray-600">Dados do parceiro não encontrados.</div>;
@@ -383,53 +499,3 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
     </div>
   );
 }
-
-// --- Folha de Estilos Unificada ---
-const getStyles = (isMobile) => ({
-  container: { padding: isMobile ? "16px" : "32px 16px", fontFamily: "Inter, Arial, sans-serif", maxWidth: 1000, margin: "auto", background: "linear-gradient(110deg,#f8fafc 60%, #e6eaff 100%)", minHeight: "100vh" },
-  header: { fontSize: isMobile ? 24 : 32, color: "#21305b", marginBottom: 20, fontWeight: 900, textAlign: isMobile ? 'center' : 'left' },
-  centered: { padding: 50, textAlign: "center", color: "#888", fontSize: 18 },
-  cardsContainer: { display: "flex", gap: 16, marginBottom: 24, flexDirection: isMobile ? "column" : "row" },
-  card: (grad) => ({ background: grad, borderRadius: 18, boxShadow: "0 4px 24px #dde3ec", padding: 20, flex: 1, color: "#fff", display: 'flex', alignItems: 'center', gap: 16 }),
-  cardText: { display: 'flex', flexDirection: 'column' },
-  cardLabel: { fontSize: 16, opacity: 0.9 },
-  cardValue: { fontSize: 28, fontWeight: 900, marginTop: 8 },
-  ctaButton: { background: "#007bff", color: "#fff", border: "none", padding: "16px", fontSize: 16, fontWeight: "bold", borderRadius: 12, cursor: "pointer", width: "100%", transition: "all 0.3s", boxShadow: "0 4px 12px rgba(0, 123, 255, 0.4)", marginTop: 20 },
-  ctaButtonDisabled: { background: "#a0c7e4", color: "#e9f2fa", border: "none", padding: "16px", fontSize: 16, fontWeight: "bold", borderRadius: 12, cursor: "not-allowed", width: "100%", marginTop: 20 },
-  secondaryButton: { background: 'transparent', color: '#007bff', border: '1px solid #007bff', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', width: '100%', marginTop: 10, fontWeight: 600 },
-  tableSection: { background: "#fff", borderRadius: 16, boxShadow: "0 0 32px #e6eaff", padding: isMobile ? 16 : 24, marginTop: 24 },
-  tableTitle: { fontWeight: "bold", color: "#274472", marginBottom: 16, fontSize: isMobile ? 18 : 20, textAlign: isMobile ? 'center' : 'left' },
-  tableContainer: { overflowX: "auto", maxHeight: '40vh' },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 16 },
-  thead_tr: { borderBottom: '2px solid #e0e6f1' },
-  th: { textAlign: "left", padding: 12, color: '#556a9b', fontWeight: 600, fontSize: 14 },
-  tbody_tr: (idx) => ({ background: idx % 2 === 0 ? "#fdfdff" : "#fff" }),
-  td: { padding: 12, color: '#334' },
-  td_valor: { padding: 12, color: "#177a1a", fontWeight: "bold", fontSize: 18 },
-  td_valor_small: { padding: 12, color: "#177a1a", fontWeight: "600" },
-  emptyTable: { textAlign: "center", padding: 28, color: "#888" },
-  backButton: { background: 'transparent', border: 'none', color: '#007bff', fontSize: 16, cursor: 'pointer', marginBottom: 15, fontWeight: 600 },
-  totalValue: { fontSize: 36, fontWeight: 'bold', color: '#007bff', margin: '10px 0', textAlign: 'center' },
-  pixSection: { background: '#fff', borderRadius: 16, padding: 20, marginTop: 24, textAlign: 'center', boxShadow: "0 0 32px #e6eaff" },
-  pixTitle: { color: '#274472', fontWeight: 600, margin: '0 0 10px 0' },
-  pixDisplay: { fontSize: 18, fontWeight: 500, background: '#f0f4f8', padding: 12, borderRadius: 8, wordBreak: 'break-all', color: '#333' },
-  pixButton: { background: '#e9ecef', border: '1px solid #ccc', color: '#333', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', marginTop: 10, fontWeight: 600 },
-  modalOverlay: { position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(30, 40, 90, 0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: 'blur(5px)' },
-  modalContent: { background: "#fff", borderRadius: 20, padding: isMobile ? 20 : 30, width: '90%', maxWidth: 500, boxShadow: "0 4px 40px #0004", position: "relative", animation: "fadein 0.3s" },
-  modalCloseButton: { position: "absolute", top: 10, right: 10, background: "#f1f1f1", border: "none", borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', fontWeight: 'bold' },
-  modalTitle: { textAlign: 'center', color: '#21305b', marginBottom: 20, fontSize: 22 },
-  modalText: { textAlign: 'center', color: '#555', marginBottom: 15 },
-  inputGroup: { position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 10, svg: { position: 'absolute', left: 12, color: '#888' } },
-  input: { width: '100%', boxSizing: 'border-box', padding: '12px 12px 12px 40px', fontSize: 16, border: '1px solid #ccc', borderRadius: 8 },
-  feedback: { padding: 12, borderRadius: 8, textAlign: 'center', fontWeight: 600 },
-  errorText: { color: '#dc3545', textAlign: 'center', marginTop: 10, fontWeight: 500 },
-  badgeSuccess: { backgroundColor: 'rgba(40, 167, 69, 0.1)', color: '#155724', padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 'bold' },
-  badgeWarning: { backgroundColor: 'rgba(255, 193, 7, 0.1)', color: '#856404', padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 'bold' },
-  badgeInfo: { backgroundColor: 'rgba(0, 123, 255, 0.1)', color: '#004085', padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 'bold' },
-  // ADICIONADO: Novo estilo para a tag de erro/retido
-  badgeError: { backgroundColor: 'rgba(220, 53, 69, 0.1)', color: '#721c24', padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 'bold' },
-  filterContainer: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 20, padding: 10, background: '#f8f9fa', borderRadius: 8 },
-  dateInput: { border: '1px solid #ccc', borderRadius: 6, padding: 8, fontSize: 14 },
-  clearButton: { background: '#6c757d', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 12px', cursor: 'pointer' },
-  footer: { fontSize: 12, color: "#aaa", marginTop: 40, textAlign: "center", letterSpacing: 1 },
-});

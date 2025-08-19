@@ -1,5 +1,3 @@
-// src/pages/Agenda.jsx
-
 import React, { useEffect, useState, useRef } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -35,7 +33,8 @@ function Agenda() {
 
   const today = new Date();
 
-useEffect(() => {
+  // Efeito para buscar os dados do Firestore
+  useEffect(() => {
     if (authLoading || !currentUser) {
       setLoading(false);
       setServicosDisponiveis([]);
@@ -46,12 +45,13 @@ useEffect(() => {
       hasLoggedView.current = true;
     }
 
-    const formattedSelectedDate = formatDate(selectedDate); // Pega a data formatada
+    setLoading(true);
+    const formattedSelectedDate = formatDate(selectedDate);
 
     const q = query(
       collection(db, "clientes"),
       where("Estado", "==", currentUser.estado),
-      where("data", "==", formattedSelectedDate), // <-- FILTRO ADICIONADO AQUI!
+      where("data", "==", formattedSelectedDate),
       where("status", "in", ["disponivel", "aceito", "tecdeslocamento", "teccheguei", "aguardandopagamento"])
     );
 
@@ -61,7 +61,7 @@ useEffect(() => {
         servicosDoEstado.push({ id: doc.id, ...doc.data() });
       });
 
-      setServicosDisponiveis(servicosDoEstado); // Agora já vem com os serviços só do dia certo
+      setServicosDisponiveis(servicosDoEstado);
       setLoading(false);
     }, (error) => {
       console.error("Erro ao buscar serviços:", error);
@@ -69,12 +69,23 @@ useEffect(() => {
     });
 
     return () => unsubscribe();
-  }, [currentUser, authLoading, selectedDate]); // <-- ADICIONADO selectedDate ÀS DEPENDÊNCIAS
+  }, [currentUser, authLoading, selectedDate]);
 
-  // useEffect de ORDENAÇÃO (não precisa mais filtrar)
+  // Efeito para ORDENAR os serviços sempre que a lista mudar
   useEffect(() => {
-    const servicosOrdenados = [...servicosDisponiveis] // <-- Apenas ordena
+    const servicosOrdenados = [...servicosDisponiveis]
       .sort((a, b) => {
+        // Como 'ordem' vai até 8, usamos 9 como valor padrão para itens sem 'ordem'. <-- MUDANÇA AQUI!
+        // Isso garante que eles sempre irão para o final.
+        const ordemA = a.ordem || 9; // <-- MUDANÇA AQUI!
+        const ordemB = b.ordem || 9; // <-- MUDANÇA AQUI!
+
+        // 1. Critério principal: ordenar pelo campo 'ordem'
+        if (ordemA !== ordemB) {
+          return ordemA - ordemB;
+        }
+
+        // 2. Critério de desempate: período de preferência
         const periodA = getPeriodPriority(a.periodo_preferencia);
         const periodB = getPeriodPriority(b.periodo_preferencia);
         
@@ -82,6 +93,7 @@ useEffect(() => {
           return periodA - periodB;
         }
 
+        // 3. Critério final de desempate: horário
         const timeA = a.horario ? a.horario.split(':').map(Number) : [99, 99];
         const timeB = b.horario ? b.horario.split(':').map(Number) : [99, 99];
         
@@ -93,31 +105,6 @@ useEffect(() => {
 
     setFilteredServicos(servicosOrdenados);
   }, [servicosDisponiveis]);
-
-  // useEffect para filtrar e ordenar os serviços sempre que a data ou a lista de serviços mudar
-  useEffect(() => {
-    const formattedSelectedDate = formatDate(selectedDate);
-    const servicosDoDia = servicosDisponiveis
-      .filter(servico => servico.data === formattedSelectedDate)
-      .sort((a, b) => {
-        const periodA = getPeriodPriority(a.periodo_preferencia);
-        const periodB = getPeriodPriority(b.periodo_preferencia);
-        
-        if (periodA !== periodB) {
-          return periodA - periodB;
-        }
-
-        const timeA = a.horario ? a.horario.split(':').map(Number) : [99, 99];
-        const timeB = b.horario ? b.horario.split(':').map(Number) : [99, 99];
-        
-        if (timeA[0] !== timeB[0]) {
-          return timeA[0] - timeB[0];
-        }
-        return timeA[1] - timeB[1];
-      });
-
-    setFilteredServicos(servicosDoDia);
-  }, [servicosDisponiveis, selectedDate]);
 
   const handleNextDay = () => {
     const nextDay = new Date(selectedDate);
