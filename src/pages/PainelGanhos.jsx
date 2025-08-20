@@ -17,6 +17,8 @@ import {
 } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, GoogleAuthProvider, reauthenticateWithPopup } from "firebase/auth";
 import { logUserActivity } from '../utils/logger.js';
+import { validateAndFormatRandomPixKey, isRandomPixKey } from '../utils/pixValidator';
+import { useNotification } from '../context/NotificationContext.jsx';
 
 
  const s = {
@@ -111,6 +113,7 @@ const IconKey = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5
 // --- Componente Principal ---
 export default function PainelGanhos() {
   const { currentUser } = useAuth();
+  const { success, error, warning, info } = useNotification();
   const parceiroUID = currentUser?.uid;
   const [parceiroInfo, setParceiroInfo] = useState(null);
   const [atendimentos, setAtendimentos] = useState([]);
@@ -250,12 +253,26 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
    const handleUpdateChavePix = async (e) => {
     e.preventDefault();
     if (!novaChavePix) return;
+    
+    // Validar se é uma chave PIX aleatória
+    const validation = validateAndFormatRandomPixKey(novaChavePix);
+    if (!validation.isValid) {
+      setFeedback({ type: "error", message: validation.message });
+      return;
+    }
+    
     setProcessing(true);
     try {
-      await updateDoc(doc(db, "usuarios", parceiroUID), { chave_pix: novaChavePix, chave_pix_ultima_alteracao: Timestamp.now() });
-      setParceiroInfo(prev => ({ ...prev, chave_pix: novaChavePix }));
+      await updateDoc(doc(db, "usuarios", parceiroUID), { 
+        chave_pix: validation.formattedKey, 
+        chave_pix_ultima_alteracao: Timestamp.now() 
+      });
+      setParceiroInfo(prev => ({ ...prev, chave_pix: validation.formattedKey }));
       setShowPixModal(false);
-    } catch (error) { setFeedback({ type: "error", message: "Erro ao salvar a nova chave." }); }
+      success('Chave PIX atualizada com sucesso!');
+    } catch (error) { 
+      error('Erro ao salvar a nova chave. Tente novamente.', 'Erro ao salvar');
+    }
     finally { setProcessing(false); }
   };
 
@@ -296,7 +313,7 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
             : atendimento
         )
       );
-      setFeedback({ type: "success", message: `Solicitação de ${valorFormatado} enviada com sucesso!` });
+      success(`Solicitação de ${valorFormatado} enviada com sucesso! Você receberá o pagamento na sua chave PIX em até 24 horas úteis.`, 'Solicitação Enviada!');
       setView("dashboard");
 
    } catch (error) {
@@ -355,8 +372,44 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
           </>
         ) : (
           <form onSubmit={handleUpdateChavePix}>
-            <p style={s.modalText}>Ótimo! Agora digite sua nova chave PIX.</p>
-            <div style={s.inputGroup}><IconKey /><input type="text" placeholder="Nova Chave PIX" style={s.input} value={novaChavePix} onChange={e => setNovaChavePix(e.target.value)} autoFocus/></div>
+            <p style={s.modalText}>Ótimo! Agora digite sua chave PIX.</p>
+            
+            {/* Explicação amigável sobre chave PIX */}
+            <div style={{backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px', marginBottom: '15px', border: '1px solid #e9ecef'}}>
+              <h4 style={{margin: '0 0 8px 0', color: '#495057', fontSize: '14px', fontWeight: 'bold'}}>
+                ℹ️ Que tipo de chave PIX usar?
+              </h4>
+              <p style={{margin: '0 0 8px 0', fontSize: '13px', color: '#6c757d', lineHeight: '1.4'}}>
+                Por segurança, aceitamos apenas a <strong>"Chave Aleatória"</strong> do PIX.
+              </p>
+              <p style={{margin: '0', fontSize: '12px', color: '#28a745', lineHeight: '1.3'}}>
+                <strong>✅ Exemplo válido:</strong> a1b2c3d4-5678-9abc-def0-123456789012
+              </p>
+              <details style={{marginTop: '8px'}}>
+                <summary style={{fontSize: '12px', color: '#007bff', cursor: 'pointer'}}>
+                  Como encontrar minha chave aleatória? 👆 Clique aqui
+                </summary>
+                <div style={{marginTop: '8px', fontSize: '11px', color: '#6c757d', lineHeight: '1.4'}}>
+                  <p><strong>No app do seu banco:</strong></p>
+                  <p>1. Vá em PIX → Minhas Chaves</p>
+                  <p>2. Procure a chave que tem números e letras com traços</p>
+                  <p>3. Copie e cole aqui</p>
+                  <p style={{color: '#dc3545', marginTop: '4px'}}>⚠️ Não aceitamos CPF, email ou telefone</p>
+                </div>
+              </details>
+            </div>
+            
+            <div style={s.inputGroup}>
+              <IconKey />
+              <input 
+                type="text" 
+                placeholder="Cole sua chave PIX aleatória aqui" 
+                style={s.input} 
+                value={novaChavePix} 
+                onChange={e => setNovaChavePix(e.target.value)} 
+                autoFocus
+              />
+            </div>
             <button type="submit" disabled={processing} style={s.ctaButton}>{processing ? 'Salvando...' : 'Salvar Nova Chave'}</button>
           </form>
         )}
@@ -477,10 +530,11 @@ const { disponiveis, totalDisponivel } = useMemo(() => {
         <button onClick={handlePixModalOpen} className="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg mt-3 transition duration-300 hover:bg-gray-300">Alterar</button>
       </div>
 
-      <button onClick={handleSolicitarPagamento} disabled={processing || totalDisponivel <= 0 || !parceiroInfo.chave_pix} className={`w-full p-4 font-bold rounded-xl transition duration-300 shadow-lg ${processing || totalDisponivel <= 0 || !parceiroInfo.chave_pix ? 'bg-gray-400 text-gray-600 cursor-not-allowed' : 'bg-brand-blue text-white hover:bg-blue-600'}`}>
+      <button onClick={handleSolicitarPagamento} disabled={processing || totalDisponivel <= 0 || !parceiroInfo.chave_pix || !isRandomPixKey(parceiroInfo.chave_pix)} className={`w-full p-4 font-bold rounded-xl transition duration-300 shadow-lg ${processing || totalDisponivel <= 0 || !parceiroInfo.chave_pix || !isRandomPixKey(parceiroInfo.chave_pix) ? 'bg-gray-400 text-gray-600 cursor-not-allowed' : 'bg-brand-blue text-white hover:bg-blue-600'}`}>
         {processing ? 'Processando...' : 'Confirmar e Enviar Solicitação'}
       </button>
       {!parceiroInfo.chave_pix && <p className="text-red-500 text-center text-sm mt-3 font-semibold">Você precisa cadastrar uma chave PIX para solicitar.</p>}
+      {parceiroInfo.chave_pix && !isRandomPixKey(parceiroInfo.chave_pix) && <p className="text-red-500 text-center text-sm mt-3 font-semibold">Por segurança, aceitamos apenas chaves PIX aleatórias. Clique em "Alterar" para cadastrar uma chave válida.</p>}
       {feedback.message && <div className={`p-3 rounded-lg text-sm font-semibold mt-4 text-center ${feedback.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{feedback.message}</div>}
 
     </>

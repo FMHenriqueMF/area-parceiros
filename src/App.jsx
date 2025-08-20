@@ -15,8 +15,7 @@ import { useAuth } from './context/AuthContext';
 import React, { useEffect, useState } from 'react';
 // Imports necessários para o Firebase
 import { getFirestore, doc, onSnapshot, updateDoc } from 'firebase/firestore'; 
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { NotificationProvider } from './context/NotificationContext.jsx';
 import Agenda from './pages/Agenda.jsx';
 import TecnicoDetailPage from './pages/TecnicoDetailPage.jsx';
 import MapaClientesPage from './pages/MapaClientesPage.jsx'; // 1. Importe a nova página
@@ -99,22 +98,24 @@ function App() {
 
   // Renderização normal do aplicativo
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>} >
-        <Route index element={<DashboardPage />} />
-        <Route path="lista" element={<ListaPage />} />
-        <Route path="cliente/:id" element={<ClientDetailPage />} />
-        <Route path='info' element={<InfoPage/>}/>
-        <Route path="servico/:id" element={<TecnicoDetailPage />} />
-                <Route path="mapa" element={<MapaClientesPage />} />
+    <NotificationProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>} >
+          <Route index element={<DashboardPage />} />
+          <Route path="lista" element={<ListaPage />} />
+          <Route path="cliente/:id" element={<ClientDetailPage />} />
+          <Route path='info' element={<InfoPage/>}/>
+          <Route path="servico/:id" element={<TecnicoDetailPage />} />
+                  <Route path="mapa" element={<MapaClientesPage />} />
 
-        <Route path="meus-servicos" element={<MeusServicosPage />} />
-        <Route path="saldos" element={<PainelGanhos />} />
-        <Route path="perfil" element={<PerfilPage />} />
-        <Route path="agenda" element={<Agenda />} />
-      </Route>
-    </Routes>
+          <Route path="meus-servicos" element={<MeusServicosPage />} />
+          <Route path="saldos" element={<PainelGanhos />} />
+          <Route path="perfil" element={<PerfilPage />} />
+          <Route path="agenda" element={<Agenda />} />
+        </Route>
+      </Routes>
+    </NotificationProvider>
   );
 }
 

@@ -1,9 +1,9 @@
 // src/components/carousel/TecPayment.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FiDollarSign, FiArrowLeft, FiSend, FiCheckCircle, FiPlusCircle, FiLock, FiUnlock, FiAlertCircle } from 'react-icons/fi';
 import { toast } from 'react-toastify';
-import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { logUserActivity } from '../../utils/logger';
 import { useAuth } from '../../context/AuthContext';
@@ -34,6 +34,7 @@ const TecPayment = ({ clientData, onPrev }) => {
       isVerificationLoading: false,
       isLocked: false,
       errorMessage: '',
+      retryAttempt: 0,
     },
   ]);
   
@@ -48,9 +49,9 @@ const TecPayment = ({ clientData, onPrev }) => {
   }, [payments]);
 
   // Efeito para ouvir mudanças no cliente em tempo real (ex: autorizações da base)
-const [verificationTimeouts, setVerificationTimeouts] = useState({});
+const verificationTimeoutsRef = useRef({});
 
-// useEffect para verificação em tempo real - VERIFICAÇÃO EXATA
+// useEffect para verificação em tempo real - OTIMIZADO
 useEffect(() => {
     if (!clientData.id) return;
 
@@ -58,37 +59,23 @@ useEffect(() => {
     const unsubscribe = onSnapshot(clientRef, (doc) => {
       if (doc.exists()) {
         const updatedClientData = doc.data();
-        console.log('🔄 Dados atualizados do Firebase:', updatedClientData); // Debug
         
         setPayments(prevPayments => {
             return prevPayments.map((payment, index) => {
                 if (payment.isVerificationLoading) {
                     const valorPagoFirebase = Number(updatedClientData.valorpago);
                     const valorDigitado = Number(payment.value);
-                    
-                    console.log(`🔍 Verificando pagamento ${index + 1}:`, {
-                        valorPagoFirebase,
-                        valorDigitado,
-                        saoIguais: valorPagoFirebase === valorDigitado,
-                        paymentId: payment.verificationId,
-                        clienteId: clientData.id
-                    });
 
                     // ✅ VERIFICAÇÃO EXATA - valores devem ser IDÊNTICOS
                     if (valorPagoFirebase && valorPagoFirebase === valorDigitado) {
-                        console.log(`✅ Pagamento ${index + 1} VERIFICADO!`);
                         
                         // Limpa o timeout se existir
-                        if (verificationTimeouts[index]) {
-                            clearTimeout(verificationTimeouts[index]);
-                            setVerificationTimeouts(prev => {
-                                const newTimeouts = { ...prev };
-                                delete newTimeouts[index];
-                                return newTimeouts;
-                            });
+                        if (verificationTimeoutsRef.current[index]) {
+                            clearTimeout(verificationTimeoutsRef.current[index]);
+                            delete verificationTimeoutsRef.current[index];
                         }
 
-                        toast.success(`Pagamento #${index + 1} verificado com sucesso!`);
+                        toast.success(`💰 Pagamento #${index + 1} verificado!`);
                         
                         return {
                             ...payment,
@@ -101,99 +88,184 @@ useEffect(() => {
 
                     // ✅ Verifica se o Make retornou algum erro específico
                     if (updatedClientData.verification_error) {
-                        console.log(`❌ Erro na verificação:`, updatedClientData.verification_error);
                         
                         // Limpa o timeout
-                        if (verificationTimeouts[index]) {
-                            clearTimeout(verificationTimeouts[index]);
-                            setVerificationTimeouts(prev => {
-                                const newTimeouts = { ...prev };
-                                delete newTimeouts[index];
-                                return newTimeouts;
-                            });
+                        if (verificationTimeoutsRef.current[index]) {
+                            clearTimeout(verificationTimeoutsRef.current[index]);
+                            delete verificationTimeoutsRef.current[index];
                         }
 
                         return {
                             ...payment,
                             isVerificationLoading: false,
-                            errorMessage: `Erro na verificação: ${updatedClientData.verification_error}`,
+                            errorMessage: `❌ ${updatedClientData.verification_error}`,
                         };
                     }
                 }
                 return payment;
             });
         });
-      } else {
-        console.log('❌ Documento do cliente não encontrado!');
       }
     }, (error) => {
         console.error('❌ Erro no listener do Firebase:', error);
+        toast.error('Erro de conexão. Verifique sua internet.');
     });
 
     return () => {
         unsubscribe();
         // Limpa todos os timeouts ao desmontar
-        Object.values(verificationTimeouts).forEach(timeout => clearTimeout(timeout));
+        Object.values(verificationTimeoutsRef.current).forEach(timeout => clearTimeout(timeout));
+        verificationTimeoutsRef.current = {};
     };
-}, [clientData.id, verificationTimeouts]); // ✅ Adicionei verificationTimeouts nas dependências
+}, [clientData.id]); // ✅ Removido verificationTimeouts das dependências
 
-// Função de verificação melhorada
+// Função de verificação otimizada com retry e timeout dinâmico
+const makeAPICall = async (payload, attempt = 1, maxRetries = 2) => {
+    try {
+        const controller = new AbortController();
+        const requestTimeout = 8000 + (attempt * 2000); // 8s, 10s, 12s progressivo
+        const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
+
+        console.log(`🚀 Tentativa ${attempt}/${maxRetries} - Timeout: ${requestTimeout/1000}s`);
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        console.log(`✅ API respondeu na tentativa ${attempt}`);
+        return response;
+    } catch (error) {
+        console.log(`❌ Tentativa ${attempt} falhou:`, error.message);
+        
+        if (attempt < maxRetries && error.name !== 'AbortError') {
+            const delay = 1500 * attempt; // 1.5s, 3s
+            console.log(`⏳ Aguardando ${delay/1000}s antes da próxima tentativa...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return makeAPICall(payload, attempt + 1, maxRetries);
+        }
+        throw error;
+    }
+};
+
+// Nova função: verifica primeiro no Firebase
+const checkFirebaseFirst = async (valorEsperado) => {
+    try {
+        const clientRef = doc(db, 'clientes', clientData.id);
+        const clientSnap = await getDoc(clientRef);
+        
+        if (clientSnap.exists()) {
+            const data = clientSnap.data();
+            const valorPagoFirebase = Number(data.valorpago);
+            console.log(`🔍 Firebase check: valorpago=${valorPagoFirebase}, esperado=${valorEsperado}`);
+            
+            // Se já tem o valor correto no Firebase, não precisa chamar o Make
+            if (valorPagoFirebase && valorPagoFirebase === valorEsperado) {
+                return { success: true, found: true };
+            }
+            
+            // Se tem outro valor ou erro de verificação, também não precisa chamar Make
+            if (data.verification_error) {
+                return { success: false, error: data.verification_error, found: true };
+            }
+        }
+        
+        // Não encontrou o valor correto, precisa chamar o Make
+        return { success: false, found: false };
+    } catch (error) {
+        console.error('❌ Erro ao verificar Firebase:', error);
+        return { success: false, found: false, error: error.message };
+    }
+};
+
 const handleVerifyPayment = async (index) => {
     const newPayments = [...payments];
     const paymentToVerify = newPayments[index];
 
     // Validações iniciais
-    if (!paymentToVerify.verificationId || !paymentToVerify.value) {
-        paymentToVerify.errorMessage = "Preencha o valor e o ID para verificar.";
+    if (!paymentToVerify.verificationId?.trim() || !paymentToVerify.value) {
+        paymentToVerify.errorMessage = "❌ Preencha o valor e o ID para verificar.";
         setPayments([...newPayments]);
         return;
     }
 
     // Verifica se já existe uma verificação em andamento
     if (paymentToVerify.isVerificationLoading) {
-        console.log('⏳ Verificação já está em andamento...');
         return;
     }
-    
-    console.log(`🚀 Iniciando verificação do pagamento ${index + 1}...`);
     
     paymentToVerify.isVerificationLoading = true;
     paymentToVerify.errorMessage = '';
     setPayments([...newPayments]);
 
+    const valorEsperado = Number(paymentToVerify.value);
+
     try {
+        // 🔥 NOVA LÓGICA: Verifica primeiro no Firebase
+        console.log('🔍 Verificando primeiro no Firebase...');
+        toast.info("🔍 Verificando no Firebase...");
+        
+        const firebaseCheck = await checkFirebaseFirst(valorEsperado);
+        
+        if (firebaseCheck.success) {
+            // ✅ Já encontrou no Firebase!
+            console.log('✅ Pagamento já verificado no Firebase!');
+            toast.success(`💰 Pagamento #${index + 1} já estava verificado!`);
+            
+            const updatedPayments = [...payments];
+            updatedPayments[index] = {
+                ...paymentToVerify,
+                isVerified: true,
+                isLocked: true,
+                isVerificationLoading: false,
+                errorMessage: '',
+            };
+            setPayments(updatedPayments);
+            return;
+        }
+        
+        if (firebaseCheck.found && firebaseCheck.error) {
+            // ❌ Tem erro de verificação no Firebase
+            console.log('❌ Erro já registrado no Firebase:', firebaseCheck.error);
+            const updatedPayments = [...payments];
+            updatedPayments[index] = {
+                ...paymentToVerify,
+                isVerificationLoading: false,
+                errorMessage: `❌ ${firebaseCheck.error}`,
+            };
+            setPayments(updatedPayments);
+            return;
+        }
+
+        // 🚀 Só chama o Make se não encontrou no Firebase
+        console.log('🚀 Valor não encontrado no Firebase, consultando Make...');
+        toast.info("🔄 Consultando Make.com...");
+        
         const payload = {
-            payment_id: paymentToVerify.verificationId.trim(), // Remove espaços extras
+            payment_id: paymentToVerify.verificationId.trim(),
             external_reference: clientData.id,
-            valor_esperado: Number(paymentToVerify.value),
+            valor_esperado: valorEsperado,
             timestamp: new Date().toISOString()
         };
 
-        console.log('📤 Enviando para Make:', payload);
+        await makeAPICall(payload);
+        toast.info("✅ Make consultado! Aguardando atualização...");
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(payload),
-        });
-        
-        console.log('📥 Resposta do Make:', response.status, response.statusText);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Erro HTTP:', errorText);
-            throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
-        }
-
-        toast.info("Verificação enviada ao Make. Aguardando confirmação...");
-
-        // ✅ Timeout com cleanup melhorado
+        // ✅ Timeout reduzido já que Make só precisa atualizar o Firebase
         const timeoutId = setTimeout(() => {
-            console.log(`⏰ Timeout atingido para pagamento ${index + 1}`);
-            
             setPayments(currentPayments => {
                 const p = currentPayments[index];
                 if (p && p.isVerificationLoading) {
@@ -201,36 +273,35 @@ const handleVerifyPayment = async (index) => {
                     updatedPayments[index] = {
                         ...p,
                         isVerificationLoading: false,
-                        errorMessage: "A verificação está demorando. Verifique se o ID está correto ou tente novamente."
+                        errorMessage: "⏰ Verifique o valor e tente novamente."
                     };
                     return updatedPayments;
                 }
                 return currentPayments;
             });
             
-            // Remove o timeout da lista
-            setVerificationTimeouts(prev => {
-                const newTimeouts = { ...prev };
-                delete newTimeouts[index];
-                return newTimeouts;
-            });
-        }, 25000); // 25 segundos
+            delete verificationTimeoutsRef.current[index];
+        }, 20000); // Reduzido para 20 segundos
 
-        // Armazena o timeout
-        setVerificationTimeouts(prev => ({
-            ...prev,
-            [index]: timeoutId
-        }));
+        // Armazena o timeout no ref
+        verificationTimeoutsRef.current[index] = timeoutId;
 
     } catch (error) {
         console.error("❌ Erro ao verificar pagamento:", error);
         
+        let errorMessage = "❌ Erro na verificação. Tente novamente.";
+        if (error.name === 'AbortError') {
+            errorMessage = "⏰ Timeout na verificação. Verifique sua conexão.";
+        } else if (error.message.includes('HTTP')) {
+            errorMessage = `❌ Erro do servidor: ${error.message}`;
+        }
+        
         const updatedPayments = [...payments];
         updatedPayments[index].isVerificationLoading = false;
-        updatedPayments[index].errorMessage = `Erro: ${error.message}`;
+        updatedPayments[index].errorMessage = errorMessage;
         setPayments(updatedPayments);
         
-        toast.error("Erro ao enviar verificação para o Make.");
+        toast.error("Falha na verificação. Tente novamente.");
     }
 };
 
@@ -238,7 +309,7 @@ const handleVerifyPayment = async (index) => {
   const handleAddPayment = () => {
     setPayments([...payments, {
       value: '', method: '', verificationId: '', isVerified: false,
-      isVerificationLoading: false, isLocked: false, errorMessage: '',
+      isVerificationLoading: false, isLocked: false, errorMessage: '', retryAttempt: 0,
     }]);
   };
 
@@ -248,57 +319,6 @@ const handleVerifyPayment = async (index) => {
     newPayments[index].errorMessage = '';
     setPayments(newPayments);
   };
-  {/*
-  const handleVerifyPayment = async (index) => {
-    const newPayments = [...payments];
-    const paymentToVerify = newPayments[index];
-
-    if (!paymentToVerify.verificationId || !paymentToVerify.value) {
-        paymentToVerify.errorMessage = "Preencha o valor e o ID para verificar.";
-        setPayments([...newPayments]);
-        return;
-    }
-    
-    paymentToVerify.isVerificationLoading = true;
-    paymentToVerify.errorMessage = '';
-    setPayments([...newPayments]);
-
-    try {
-        await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                payment_id: paymentToVerify.verificationId,
-                external_reference: clientData.id 
-            }),
-        });
-        
-        toast.info("Verificação iniciada. Aguardando confirmação...");
-
-        setTimeout(() => {
-            setPayments(currentPayments => {
-                const p = currentPayments[index];
-                if (p && p.isVerificationLoading) {
-                    const updatedPayments = [...currentPayments];
-                    updatedPayments[index] = {
-                        ...p,
-                        isVerificationLoading: false,
-                        errorMessage: "A verificação está a demorar. Tente novamente ou verifique mais tarde."
-                    };
-                    return updatedPayments;
-                }
-                return currentPayments;
-            });
-        }, 25000);
-
-    } catch (error) {
-        console.error("Erro ao iniciar a verificação do pagamento:", error);
-        const updatedPayments = [...payments];
-        updatedPayments[index].isVerificationLoading = false;
-        updatedPayments[index].errorMessage = `Erro ao iniciar a verificação. Tente novamente.`;
-        setPayments(updatedPayments);
-    }
-  };*/}
 
   const handleFinalizeService = async () => {
     setActionLoading(true);
@@ -453,10 +473,24 @@ const handleVerifyPayment = async (index) => {
                       />
                       <button
                         onClick={() => handleVerifyPayment(index)}
-                        className={`flex items-center justify-center p-3 rounded-lg transition duration-300 ${payment.isVerified ? 'bg-green-600' : 'bg-brand-blue hover:bg-blue-600'} text-white font-bold disabled:bg-gray-500`}
+                        className={`flex items-center justify-center p-3 rounded-lg transition duration-300 min-w-[60px] ${
+                          payment.isVerified 
+                            ? 'bg-green-600' 
+                            : payment.isVerificationLoading 
+                              ? 'bg-blue-500' 
+                              : 'bg-brand-blue hover:bg-blue-600'
+                        } text-white font-bold disabled:bg-gray-500`}
                         disabled={payment.isLocked || payment.isVerificationLoading}
+                        title={payment.isVerificationLoading ? 'Verificando com retry automático...' : payment.isVerified ? 'Verificado!' : 'Verificar pagamento'}
                       >
-                        {payment.isVerificationLoading ? <LoadingSpinner /> : (payment.isVerified ? <FiCheckCircle size={20} /> : <FiSend size={20} />)}
+                        {payment.isVerificationLoading ? (
+                          <div className="flex flex-col items-center">
+                            <LoadingSpinner />
+                            <span className="text-xs mt-1">⚡</span>
+                          </div>
+                        ) : (
+                          payment.isVerified ? <FiCheckCircle size={20} /> : <FiSend size={20} />
+                        )}
                       </button>
                     </div>
                     {payment.errorMessage && <p className="text-red-500 text-xs mt-1">{payment.errorMessage}</p>}

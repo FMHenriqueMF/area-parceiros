@@ -65,10 +65,13 @@ function MapaClientesPage() {
     setLoading(true);
     const geocoder = new window.google.maps.Geocoder();
 
+    // Permite que parceiros de GO vejam também clientes de DF
+    const estadosPermitidos = currentUser.estado === 'GO' ? ['GO', 'DF'] : [currentUser.estado];
+
     const q = query(
       collection(db, "clientes"),
       where("status", "==", "disponivel"),
-      where("Estado", "==", currentUser.estado)
+      where("Estado", "in", estadosPermitidos)
     );
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {

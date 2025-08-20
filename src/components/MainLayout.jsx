@@ -5,6 +5,7 @@ import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav'; // 1. Importar a BottomNav
 import FloatingSupportButton from './FloatingSupportButton'; // 1. Importar o novo componente
+import NewsletterBadge from './NewsletterBadge'; // Newsletter de atualizações
 
 
 function MainLayout() {
@@ -16,8 +17,8 @@ function MainLayout() {
         <Outlet />
       </main>
       <BottomNav /> {/* 2. Adicionar a BottomNav aqui */}
-            <FloatingSupportButton /> {/* 2. Adicionar o botão aqui */}
-
+      <FloatingSupportButton /> {/* 2. Adicionar o botão aqui */}
+      <NewsletterBadge /> {/* Newsletter badge discreto */}
     </div>
   );
 }

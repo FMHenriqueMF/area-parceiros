@@ -48,9 +48,12 @@ function Agenda() {
     setLoading(true);
     const formattedSelectedDate = formatDate(selectedDate);
 
+    // Permite que parceiros de GO vejam também clientes de DF
+    const estadosPermitidos = currentUser.estado === 'GO' ? ['GO', 'DF'] : [currentUser.estado];
+
     const q = query(
       collection(db, "clientes"),
-      where("Estado", "==", currentUser.estado),
+      where("Estado", "in", estadosPermitidos),
       where("data", "==", formattedSelectedDate),
       where("status", "in", ["disponivel", "aceito", "tecdeslocamento", "teccheguei", "aguardandopagamento"])
     );

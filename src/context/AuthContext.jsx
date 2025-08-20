@@ -122,6 +122,28 @@ export function AuthProvider({ children }) {
               setLoading(false);
             } catch (error) {
               console.error("Erro ao carregar dados do usuário:", error);
+              
+              // Tratamento específico para erros de conectividade
+              if (error.code === 'unavailable' || 
+                  error.message.includes('QUIC') || 
+                  error.message.includes('network') ||
+                  error.message.includes('offline')) {
+                console.log('Problema de conectividade detectado, continuando com cache local');
+                // Não definir loading como false ainda, deixar o cache funcionar
+              } else {
+                setLoading(false);
+              }
+            }
+          }, (error) => {
+            console.error("Erro no listener de usuário:", error);
+            
+            // Tratamento específico para erros de conectividade no listener de usuário
+            if (error.code === 'unavailable' || 
+                error.message.includes('QUIC') || 
+                error.message.includes('network') ||
+                error.message.includes('offline')) {
+              console.log('Problema de conectividade no listener de usuário, continuando com cache local');
+            } else {
               setLoading(false);
             }
           });
@@ -140,6 +162,15 @@ export function AuthProvider({ children }) {
               setIsAppLocked(false);
               setActiveServiceId(null);
             }
+          }, (error) => {
+            console.error("Erro no listener de serviços ativos:", error);
+            
+            // Para erros de conectividade, manter estado atual
+            if (error.code === 'unavailable' || 
+                error.message.includes('QUIC') || 
+                error.message.includes('network')) {
+              console.log('Problema de conectividade no listener de serviços, mantendo estado atual');
+            }
           });
         } else {
           setCurrentUser(null);
@@ -152,7 +183,26 @@ export function AuthProvider({ children }) {
         }
       } catch (error) {
         console.error("Erro fatal no AuthContext:", error);
-        setLoading(false);
+        
+        // Tratamento específico para erros de conectividade no nível principal
+        if (error.code === 'unavailable' || 
+            error.message.includes('QUIC') || 
+            error.message.includes('network') ||
+            error.message.includes('offline')) {
+          console.log('Erro de conectividade no AuthContext, tentando recuperar automaticamente...');
+          
+          // Tentar reconectar após um delay
+          setTimeout(() => {
+            if (!navigator.onLine) {
+              console.log('Ainda offline, aguardando conectividade...');
+            } else {
+              console.log('Conectividade restaurada, recarregando contexto...');
+              // O listener será reativado automaticamente quando voltar online
+            }
+          }, 2000);
+        } else {
+          setLoading(false);
+        }
       }
     });
 

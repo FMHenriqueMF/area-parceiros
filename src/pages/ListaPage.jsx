@@ -27,11 +27,14 @@ function ListaPage() {
 
       // O resto da sua lógica de busca de clientes continua exatamente igual
       setLoading(true);
+      
+      // Permite que parceiros de GO vejam também clientes de DF
+      const estadosPermitidos = currentUser.estado === 'GO' ? ['GO', 'DF'] : [currentUser.estado];
+      
       const q = query(
         collection(db, "clientes"),
         where("status", "==", "disponivel"),
-        // 2. Comparamos o campo 'Estado' (maiúsculo) com o valor de 'currentUser.estado' (minúsculo)
-        where("Estado", "==", currentUser.estado)
+        where("Estado", "in", estadosPermitidos)
       );
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
